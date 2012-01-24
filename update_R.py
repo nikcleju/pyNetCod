@@ -2,10 +2,8 @@ import numpy
 import scipy.io
 import math
 
-hbuf = 0
-sum_inverses_E1 = numpy.array()
-sum_inverses_E2 = numpy.array()
-sum_inverses_E1E2 = numpy.array()
+import globalvars
+
     
 def update_R(R, net, p0matrix, ncnodes, tc):
   # MATLAB: function newR = update_R(R, net, p0matrix, ncnodes, tc)
@@ -59,19 +57,19 @@ def update_R(R, net, p0matrix, ncnodes, tc):
   
 def compute_Requiv(estim_delay, p0, NI, Rinitial):
     #MATLAB function Requiv = compute_Requiv(estim_delay, p0, NI, Rinitial)
-    
-    global hbuf;
-    global sum_inverses_E1;
-    global sum_inverses_E2;
-    global sum_inverses_E1E2;
+     
+    #global hbuf;
+    #global sum_inverses_E1;
+    #global sum_inverses_E2;
+    #global sum_inverses_E1E2;
     
     #if isempty(sum_inverses_E1)
-    if sum_inverses_E1.size == 0:
+    if globalvars.sum_inverses_E1.size == 0:
         #load suminv_hbuf32;
         mdict = scipy.io.loadmat('suminv_hbuf32.mat')
-        sum_inverses_E1 = mdict['sum_inverses_E1']
-        sum_inverses_E2 = mdict['sum_inverses_E2']
-        sum_inverses_E1E2 = mdict['sum_inverses_E1E2']
+        globalvars.sum_inverses_E1 = mdict['sum_inverses_E1']
+        globalvars.sum_inverses_E2 = mdict['sum_inverses_E2']
+        globalvars.sum_inverses_E1E2 = mdict['sum_inverses_E1E2']
     #end
     
     #if exist('estim_delay', 'var') && ~isempty(estim_delay) && p0 < 1 && estim_delay < 1e4
@@ -98,12 +96,12 @@ def compute_Requiv(estim_delay, p0, NI, Rinitial):
             Requiv_low = Rinitial
         #else if estim_input_packets_low >= 2*hbuf
         else:
-            if estim_input_packets_low >= 2*hbuf:
+            if estim_input_packets_low >= 2*globalvars.hbuf:
                 #Ri = 1+(Rinitial-1)*[sum_inverses_E1   ones(1, estim_input_packets_low-2*hbuf)   sum_inverses_E2];
-                Ri = 1+(Rinitial-1)*numpy.concatenate((sum_inverses_E1, numpy.ones(estim_input_packets_low-2*hbuf), sum_inverses_E2))
+                Ri = 1+(Rinitial-1)*numpy.concatenate((globalvars.sum_inverses_E1, numpy.ones(estim_input_packets_low-2*globalvars.hbuf), globalvars.sum_inverses_E2))
             else:
                 #Ri = 1+(Rinitial-1)*sum_inverses_E1E2{estim_input_packets_low};
-                Ri = 1+(Rinitial-1)*sum_inverses_E1E2[estim_input_packets_low]
+                Ri = 1+(Rinitial-1)*globalvars.sum_inverses_E1E2[estim_input_packets_low]
                 #end
             #Requiv_low = log( sum(p0.^Ri) / estim_input_packets_low ) / log(p0);
             Requiv_low = math.log( numpy.sum(p0**Ri) / estim_input_packets_low ) / math.log(p0)
@@ -116,12 +114,12 @@ def compute_Requiv(estim_delay, p0, NI, Rinitial):
             Requiv_high = Rinitial
         #else if estim_input_packets_high >= 2*hbuf
         else:
-            if estim_input_packets_high >= 2*hbuf:
+            if estim_input_packets_high >= 2*globalvars.hbuf:
                 #Ri = 1+(Rinitial-1)*[sum_inverses_E1   ones(1, estim_input_packets_high-2*hbuf)   sum_inverses_E2];
-                Ri = 1+(Rinitial-1)*numpy.concatenate((sum_inverses_E1, numpy.ones(estim_input_packets_high-2*hbuf), sum_inverses_E2))
+                Ri = 1+(Rinitial-1)*numpy.concatenate((globalvars.sum_inverses_E1, numpy.ones(estim_input_packets_high-2*globalvars.hbuf), globalvars.sum_inverses_E2))
             else:
                 #Ri = 1+(Rinitial-1)*sum_inverses_E1E2{estim_input_packets_high};
-                Ri = 1+(Rinitial-1)*sum_inverses_E1E2[estim_input_packets_high]
+                Ri = 1+(Rinitial-1)*globalvars.sum_inverses_E1E2[estim_input_packets_high]
             #end
             #Requiv_high = log( 1 - sum(1 - p0.^Ri) / estim_input_packets_high ) / log(p0);
             Requiv_high = math.log( numpy.sum(p0**Ri) / estim_input_packets_high ) / math.log(p0)
