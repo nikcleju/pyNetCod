@@ -215,7 +215,7 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
             Requiv_low = R[r_idx, :]
     
             #indices1 = ~ismember(1:net.nnodes, ncnodes) & (estim_input_packets_low>0) & (estim_input_packets_low >= 2*hbuf) & (R(r_idx,:) > 1) & (p0matrix(:,r_idx) < 1)' & (b_o(:) > b_i(:))';
-            indices1 = numpy.logical_not(numpy.is1d(ncnodes , numpy.arange(net['nnodes'])))
+            indices1 = numpy.logical_not(numpy.in1d(numpy.arange(net['nnodes']), ncnodes))
             indices1 = numpy.logical_and(indices1, estim_input_packets_low>0)
             indices1 = numpy.logical_and(indices1, estim_input_packets_low >= 2*globalvars.hbuf)
             indices1 = numpy.logical_and(indices1, R[r_idx,:] > 1)
@@ -289,7 +289,7 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
             Requiv_high[indices1] = numpy.log( sum_p0_Ri / estim_input_packets_high[indices1] ) / numpy.log(p0)
             
             #indices2 = ~ismember(1:net.nnodes, ncnodes) & (estim_input_packets_high>0) & (estim_input_packets_high < 2*hbuf) & (R(r_idx,:) > 1) & (p0matrix(:,r_idx) < 1)' & (b_o(:) > b_i(:))';
-            indices2 = numpy.logical_not(numpy.is1d(ncnodes , numpy.arange(net['nnodes'])))
+            indices2 = numpy.logical_not(numpy.in1d(numpy.arange(net['nnodes']), ncnodes))
             indices2 = numpy.logical_and(indices2, estim_input_packets_high>0)
             indices2 = numpy.logical_and(indices2, estim_input_packets_high < 2*globalvars.hbuf)
             indices2 = numpy.logical_and(indices2, R[r_idx,:] > 1)
@@ -338,7 +338,7 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
     ##         end
     ##     end
     #end
-
+    return newR
     
 #def ismember(a, b):
 #    # from:
