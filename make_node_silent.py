@@ -101,3 +101,5 @@ def make_node_silent(net,node):
     #assert(all(diff.^2 < 0.001));
     assert(numpy.all(diff**2 < 0.001))
     
+    return newnet
+    
