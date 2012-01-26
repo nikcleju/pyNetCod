@@ -12,7 +12,7 @@ def create_local_network(net, centralnode, p0matrix, ecc):
     
     # Nodes' input capacities
     #b_i = sum(net.capacities .* (1-net.errorrates), 1);
-    b_i = numpy.sum(net['capacities'] * (1-net['errorrates']), 0)
+    #b_i = numpy.sum(net['capacities'] * (1-net['errorrates']), 0)
     # Nodes' output capacities
     #b_o = sum(net.capacities, 2)';
     b_o = numpy.sum(net['capacities'], 1)
