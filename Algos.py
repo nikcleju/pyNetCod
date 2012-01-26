@@ -387,4 +387,108 @@ def Algo2_Centralized_NC_sel(net, sim, runopts, crit):
     
     return ncnodes
         
+#Algorithm 3
+def Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc):
+    # MATLAB function ncnodes = Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc)
     
+    #compute_p0_matrix = @compute_p0_matrix;
+    #compute_p0_matrix = @compute_p0_matrix_optimized;
+    
+    # Number of nodes in the network
+    #N = size(net.capacities,1);
+    N = net['capacities'].shape[0]
+    
+    # Nodes' input capacities
+    #b_i = sum(net.capacities .* (1-net.errorrates), 1);
+    b_i = numpy.sum(net['capacities'] * (1-net['errorrates']), 0)
+    # Nodes' output capacities
+    #b_o = sum(net.capacities, 2)';
+    b_o = numpy.sum(net['capacities'], 1)
+    
+    # Initialize list of NC nodes
+    ncnodes = [];
+    
+    # Find initial (no NC nodes) estimates
+    tc_nonc = Algo1_delay_computation(net, sim, [], []);
+    prev_estim.ncnodes = [];
+    prev_estim.tc = tc_nonc;
+    
+    # Initialize replication rates
+    R = b_o ./ b_i;
+    R = repmat(R, numel(net.receivers), 1);
+    
+    # Update replication rates since initial (no NC nodes) estimates are available
+    # Needs to compute p0matrix
+    p0matrix_origR = compute_p0_matrix(net, prev_estim.ncnodes, R);
+    R = update_R(R, net, p0matrix_origR, prev_estim.ncnodes, prev_estim.tc);
+    
+    # Select nodes one by one
+    for i = 1:runopts.nNC
+        
+        # Find the set of SF nodes
+        SFnodes = setdiff(net.helpers,ncnodes);
+        
+        # Initialize
+        tc_all = Inf * ones(N, numel(net.receivers));
+        tc = Inf * ones(N,1);
+        fc_all = zeros(N, numel(net.receivers));
+        fc = zeros(N,1);
+    
+        # Find the p0matrix that of the global network, using updated R
+        p0matrix_updR = compute_p0_matrix(net, prev_estim.ncnodes, R);
+        
+        # For each candidate SF node
+        for u_idx = 1:numel(SFnodes)
+            u = SFnodes(u_idx);
+            
+            # Turn temporarily u into a NC node
+            ncnodes_temp = union(ncnodes, u);
+            
+            # Estimate the average decoding delay at the clients tc (using
+            # Algorithm 1)
+            # Use the accurate p0matrix computed once above the loop
+            # (i)  Create local network from the neighbourhood around node u
+            [localnet l2g g2l] = create_local_network(net, u, p0matrix_updR, ecc);
+            # TODO localnet to globalnet NC node mapping!
+            # Don't forget to translate global node indices of NC nodes to local indices
+            prev_estim_g2l = prev_estim;
+            prev_estim_g2l.ncnodes = g2l(prev_estim.ncnodes);
+            ncnodes_temp_g2l = g2l(ncnodes_temp);
+            ncnodes_temp_g2l(ncnodes_temp_g2l == 0) = []; # remove NC nodes which are not in local network
+            # (ii) Run Algorithm 1 on local network
+            if (~runopts.do_old_icc_version)
+                tc_all(u,:) = Algo1_delay_computation(localnet, sim, ncnodes_temp_g2l, prev_estim_g2l);
+            else
+                tc_all(u,:) = Algo1_delay_computation_NCasS(localnet, sim, ncnodes_temp_g2l, prev_estim_g2l);
+            end
+            tc(u) = mean(tc_all(u,:));
+            
+            # Convert delay to flow
+            fc_all(u,:) = sim.N ./ tc_all(u,:);
+            fc(u) = sum(fc_all(u,:), 2);
+        end
+        
+        # Find node which minimizes total delay / maximizes total flow
+        if strcmp(crit,'delay')
+            [min_tc, sel_u] = min(tc);
+        elseif strcmp(crit,'flow')
+            [max_fc, sel_u] = max(fc);
+        else
+            error('Not a valid selection criterion');
+        end
+        
+        # Save time estimates to use for next NC node
+        prev_estim.ncnodes = ncnodes;
+        prev_estim.tc = tc_all(sel_u,:);
+        
+        # Update replication rates using new delay estimates, to use for next NC node
+        R = update_R(R, net, p0matrix_origR, prev_estim.ncnodes, prev_estim.tc);    
+            
+        # Add node to NC list
+        ncnodes = [ncnodes sel_u];
+        #disp(['Selected node ' num2str(sel_u)]);
+    end
+    
+    disp([datestr(now) ': Selected nodes = ' num2str(ncnodes)]);
+    
+    return ncnodes
