@@ -1,5 +1,5 @@
 import numpy
-import scipy.io
+#import scipy.io
 import math
 
 import globalvars

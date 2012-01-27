@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jan 24 17:46:34 2012
-
-@author: Nic
-"""
 
 import numpy
 import scipy.io

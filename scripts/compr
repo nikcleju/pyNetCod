@@ -1,0 +1,7 @@
+if [ -d ../$1 ]
+then
+    #echo "a -t7z -x!$1.7z ../$1/$1.7z ../$1/*"
+    7z a -t7z -x\!$1.7z ../$1/$1.7z ../$1/\*
+else
+    echo "Directory ../$1 does not exists"
+fi

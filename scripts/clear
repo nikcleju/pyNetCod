@@ -1,0 +1,7 @@
+#!/usr/bin/bash
+if [ -e  ../$1/$1.7z ]
+then
+  find ../$1 \( \! -name "$1.7z" \! -name "$1" \) -delete
+else
+  echo "Archive ../$1.7z not found, aborting"
+fi

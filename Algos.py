@@ -3,11 +3,9 @@ import datetime
 
 import topsort
 
-import compute_p0_matrix
-import compute_tc
-import update_R
-import make_node_silent
-import create_local_network
+import computings
+import updateR
+import dist_specific
 
 
 # Algorithm 1: delay computation for a given network, with given NC nodes
@@ -52,13 +50,13 @@ def Algo1_delay_computation(net, sim, ncnodes, prev_estim):
     #if ~isempty(prev_estim)
     if prev_estim.size != 0:
         #p0matrix_prevestim = compute_p0_matrix(net, prev_estim.ncnodes, R);
-        p0matrix_prevestim = compute_p0_matrix.compute_p0_matrix(net, prev_estim.ncnodes, R)
+        p0matrix_prevestim = computings.compute_p0_matrix(net, prev_estim.ncnodes, R)
         # Update R
         #R = update_R(R, net, p0matrix_prevestim, prev_estim.ncnodes, prev_estim.tc);
-        R = update_R.update_R(R, net, p0matrix_prevestim, prev_estim['ncnodes'], prev_estim['tc'])
+        R = updateR.update_R(R, net, p0matrix_prevestim, prev_estim['ncnodes'], prev_estim['tc'])
     else:
         #p0matrix_prevestim = compute_p0_matrix(net, [], R);
-        p0matrix_prevestim = compute_p0_matrix.compute_p0_matrix(net, numpy.array([]), R)
+        p0matrix_prevestim = computings.compute_p0_matrix(net, numpy.array([]), R)
     #end
     
     # Nic: Python says: init tc
@@ -80,7 +78,7 @@ def Algo1_delay_computation(net, sim, ncnodes, prev_estim):
     
         # Compute p0 matrix for all clients at once
         #p0matrix_allncnodes = compute_p0_matrix(net, ncnodes, R);
-        p0matrix_allncnodes = compute_p0_matrix.compute_p0_matrix(net, ncnodes, R)
+        p0matrix_allncnodes = computings.compute_p0_matrix(net, ncnodes, R)
         
         # Repeat for each client r
         #for r_idx = 1:numel(net.receivers)
@@ -113,26 +111,26 @@ def Algo1_delay_computation(net, sim, ncnodes, prev_estim):
                 # Compute p0 matrix with only the previous NC ndoes
                 ##p0matrix_prevNC = compute_p0_matrix(net, ncnodes_topo(1:u_idx-1), R);
                 #p0matrix_prevNC_single_r = compute_p0_matrix_single_r(net, ncnodes_topo(1:u_idx-1), R, r_idx);
-                p0matrix_prevNC_single_r = compute_p0_matrix.compute_p0_matrix_single_r(net, ncnodes_topo[:u_idx], R, r_idx)
+                p0matrix_prevNC_single_r = computings.compute_p0_matrix_single_r(net, ncnodes_topo[:u_idx], R, r_idx)
                 
                 # Compute t_c(u) with u SF
                 ##tc1 = compute_tc(net, sim, ncnodes_topo(1:u_idx-1), Nc, p0matrix_prevNC(:,r_idx));
                 #tc1 = compute_tc(net, sim, ncnodes_topo(1:u_idx-1), Nc, p0matrix_prevNC_single_r);
-                tc1 = compute_tc.compute_tc(net, sim, ncnodes_topo[:u_idx], Nc, p0matrix_prevNC_single_r)
+                tc1 = computings.compute_tc(net, sim, ncnodes_topo[:u_idx], Nc, p0matrix_prevNC_single_r)
                 
                 # Make node u silent
                 #silent_net = make_node_silent(net,u);
-                silent_net = make_node_silent.make_node_silent(net,u)
+                silent_net = dist_specific.make_node_silent(net,u)
                 
                 # Compute p0 matrix for silent network
                 ##p0matrix_silent = compute_p0_matrix(silent_net, ncnodes_topo(1:u_idx-1), R);
                 #p0matrix_silent_single_r = compute_p0_matrix_single_r(silent_net, ncnodes_topo(1:u_idx-1), R, r_idx);
-                p0matrix_silent_single_r = compute_p0_matrix.compute_p0_matrix_single_r(silent_net, ncnodes_topo[:u_idx], R, r_idx)
+                p0matrix_silent_single_r = computings.compute_p0_matrix_single_r(silent_net, ncnodes_topo[:u_idx], R, r_idx)
     
                 # Compute t_c(u) with u silent
                 ##tc2 = compute_tc(silent_net, sim, ncnodes_topo(1:u_idx-1), Nc, p0matrix_silent(:,r_idx));
                 #tc2 = compute_tc(silent_net, sim, ncnodes_topo(1:u_idx-1), Nc, p0matrix_silent_single_r);
-                tc2 =compute_tc. compute_tc(silent_net, sim, ncnodes_topo[:u_idx], Nc, p0matrix_silent_single_r)
+                tc2 = computings.compute_tc(silent_net, sim, ncnodes_topo[:u_idx], Nc, p0matrix_silent_single_r)
                 
                 #delta_tc = tc2 - tc1;
                 #delta_tc = tc2 - tc1
@@ -175,7 +173,7 @@ def Algo1_delay_computation(net, sim, ncnodes, prev_estim):
             # Compute the average decoding delay tc considering all sources and
             # NC nodes simultaneously with Eq. (16)
             #tc(r_idx) = compute_tc(net, sim, ncnodes, Nc, p0matrix_allncnodes(:,r_idx));
-            tc[r_idx] = compute_tc(net, sim, ncnodes, Nc, p0matrix_allncnodes[:,r_idx])
+            tc[r_idx] = computings.compute_tc(net, sim, ncnodes, Nc, p0matrix_allncnodes[:,r_idx])
         #end
         
         # Update R
@@ -183,7 +181,7 @@ def Algo1_delay_computation(net, sim, ncnodes, prev_estim):
         ##R = update_R_vectorized(R, net, p0matrix_allncnodes, ncnodes, tc);
         ##R = update_R_vectorized(Rinit, net, p0matrix_allncnodes, ncnodes, tc);
         #R = update_R_vectorized(Rinit, net, p0matrix_prevestim, ncnodes, tc);
-        R = update_R.update_R_vectorized(Rinit, net, p0matrix_prevestim, ncnodes, tc)
+        R = updateR.update_R_vectorized(Rinit, net, p0matrix_prevestim, ncnodes, tc)
         ##assert(norm(R1 - R2) < 1e-6);
     
         ##disp(['Average tc = ' num2str(mean(tc))]);
@@ -253,7 +251,7 @@ def Algo1_delay_computation_NCasS(net, sim, ncnodes, prev_estim):
     
     # Compute p0 matrix for all clients at once
     #p0matrix_allncnodes = compute_p0_matrix(net, ncnodes, R);
-    p0matrix_allncnodes = compute_p0_matrix.compute_p0_matrix(net, ncnodes, R)
+    p0matrix_allncnodes = computings.compute_p0_matrix(net, ncnodes, R)
         
     # Nic: Python says: init I and tc
     I = numpy.zeros(net['receivers'].size)
@@ -428,9 +426,9 @@ def Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc):
     # Update replication rates since initial (no NC nodes) estimates are available
     # Needs to compute p0matrix
     #p0matrix_origR = compute_p0_matrix(net, prev_estim.ncnodes, R);
-    p0matrix_origR = compute_p0_matrix.compute_p0_matrix(net, prev_estim['ncnodes'], R)
+    p0matrix_origR = computings.compute_p0_matrix(net, prev_estim['ncnodes'], R)
     #R = update_R(R, net, p0matrix_origR, prev_estim.ncnodes, prev_estim.tc);
-    R = update_R.update_R(R, net, p0matrix_origR, prev_estim['ncnodes'], prev_estim['tc'])
+    R = updateR.update_R(R, net, p0matrix_origR, prev_estim['ncnodes'], prev_estim['tc'])
     
     # Select nodes one by one
     #for i = 1:runopts.nNC
@@ -452,7 +450,7 @@ def Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc):
     
         # Find the p0matrix that of the global network, using updated R
         #p0matrix_updR = compute_p0_matrix(net, prev_estim.ncnodes, R);
-        p0matrix_updR = compute_p0_matrix.compute_p0_matrix(net, prev_estim['ncnodes'], R)
+        p0matrix_updR = computings.compute_p0_matrix(net, prev_estim['ncnodes'], R)
         
         # For each candidate SF node
         #for u_idx = 1:numel(SFnodes)
@@ -469,7 +467,7 @@ def Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc):
             # Use the accurate p0matrix computed once above the loop
             # (i)  Create local network from the neighbourhood around node u
             #[localnet l2g g2l] = create_local_network(net, u, p0matrix_updR, ecc);
-            localnet,l2g,g2l = create_local_network.create_local_network(net, u, p0matrix_updR, ecc)
+            localnet,l2g,g2l = dist_specific.create_local_network(net, u, p0matrix_updR, ecc)
             # TODO localnet to globalnet NC node mapping!
             # Don't forget to translate global node indices of NC nodes to local indices
             #prev_estim_g2l = prev_estim;

@@ -7,9 +7,15 @@ import scipy.io
 
 import MatlabInputParser
 import create_graph
+import Algos
+import graph
+import files
 
 from numpy.random import RandomState
 rng = RandomState()
+
+class ExceptionGenerateExample:
+    pass
 
 def generate_example(folder, varargin):
     # MATLAB function [folder, randstate, net, sim, runopts] = generate_example(folder, varargin)
@@ -102,7 +108,7 @@ def generate_example(folder, varargin):
     rmin  = p.Results['rmin']
     rstep = p.Results['rstep']
     rmax  = p.Results['rmax']
-    plotK = p.Results['plotK']
+    #plotK = p.Results['plotK']
     auto_option = p.Results['auto_option']
     
     # Python:
@@ -307,7 +313,7 @@ def generate_example(folder, varargin):
                 elif reply == 'a' or reply == '':
                     #error('Aborting');
                     print('Aborting')
-                    raise
+                    raise ExceptionGenerateExample
                 #end
             #end
         #end
@@ -366,6 +372,190 @@ def generate_example(folder, varargin):
     
     
     return folder, randstate, net, sim, runopts
+    
+    
+def generate_batch(dirs):
+    # MATLAB function generate_batch(dirs)
+    
+    # set paths
+    #addpath('E:\Master\MatlabNew\code2');
+    #addpath('E:\Master\MatlabNew\code2\routeradjacency');
+    #addpath('E:\Master\MatlabNew\code2\results'); 
+    
+    n_helpers = 160
+    minnnodes = 100
+    rmin = 1
+    #rmax = Inf;
+    rmax = numpy.Inf
+    auto_option = 'a'
+    maxtries = 20
+    
+    #generate_example('E:\Master\MatlabNew\scenarios2\141', 'n_helpers', 140, 'minnnodes', 90, 'rmin', 1, 'rmax', Inf, 'auto_option', 'r', 'maxtries', 10)
+    
+    fulldirs = dict()
+    #if isnumeric(dirs)
+    if numpy.all(numpy.isreal(dirs)):
+        basepath = 'E:\\Master\\MatlabNew\\scenarios2\\'
+        
+        #for i=1:numel(dirs)
+        for i in xrange(dirs.size):
+            #fulldirs{i} = [basepath num2str(dirs(i))];
+            fulldirs[i] = basepath + str(dirs[i])
+        #end
+    else:
+        fulldirs = dirs
+    #end
+    
+    #for i=1:numel(fulldirs)
+    for i in xrange(fulldirs.size):
+        try:
+            #generate_example(fulldirs{i}, 'n_helpers', n_helpers, 'minnnodes', minnnodes, 'rmin', rmin, 'rmax', rmax, 'auto_option', auto_option, 'maxtries', maxtries);
+            generate_example(fulldirs[i], {'n_helpers': n_helpers, 'minnnodes': minnnodes, 'rmin': rmin, 'rmax': rmax, 'auto_option': auto_option, 'maxtries': maxtries})
+        #catch exception
+        except ExceptionGenerateExample:
+            #disp(['Caught exception: ' exception.identifier ' ' exception.message]);
+            print('Caught exception: ExceptionGenerateExample')
+            #if (strcmp(exception.identifier, 'create_graph_planetlab3:cantcreatenetwork'))
+            #disp(['Could not create scenario ' fulldirs{i}]);
+            print('Could not create scenario ' + fulldirs[i])
+            raise 
+            #else
+            #    # Unknown exception, let it propagate
+            #    rethrow(exception);
+            #end
+        #end
+    #end
+    
+        
+    # n_helpers = 100;
+    # n_helpers_min = 100;
+    # n_helpers_max = 200;
+    # 
+    # minnodes = 30;
+    # maxdistance  = 5;
+    # 
+    # dirnames = {};
+    # 
+    # #dirs = 180:189;
+    # #dirs = 181;
+    # for n_idx = 1:numel(dirs)
+    #     n = dirs(n_idx);
+    # 
+    #     found_network = 0;
+    #     while ~found_network
+    #         caught_exception = 0;
+    # 
+    #         try
+    #             disp(['Trying n = ' num2str(n) ', n_helpers = ' num2str(n_helpers)]);
+    #             run_example(num2str(n), 'n_helpers', n_helpers, 'maxdistance', maxdistance, 'minnnodes', minnodes, 'rmin', 1, 'rmax', Inf, 'method', [5], 'auto_overwrite', 1 )
+    # 
+    #         catch exception
+    # 
+    #             disp(['Caught exception: ' exception.identifier ' ' exception.message]);
+    #             if (strcmp(exception.identifier, 'create_graph_planetlab3:cantcreatenetwork'))
+    #                 caught_exception = 1;
+    #                 n_helpers = n_helpers + 10;
+    #             elseif (strcmp(exception.identifier, 'node_selection:initdelaytoolarge'))
+    #                 caught_exception = 1;
+    #             else
+    #                # Unknown error. Just let it propagate.
+    #                rethrow(exception);
+    #             end
+    #         end
+    #     
+    #         global global_times_p0_skipped;
+    #         global global_times_p0_done;
+    #         disp(['global_times_p0_skipped = ' num2str(global_times_p0_skipped)])
+    #         disp(['global_times_p0_done = ' num2str(global_times_p0_done)])
+    #         global global_times_innov_skipped;
+    #         global global_times_innov_done;
+    #         disp(['global_times_innov_skipped = ' num2str(global_times_innov_skipped)])
+    #         disp(['global_times_innov_done = ' num2str(global_times_innov_done)])
+    #         global global_hash_p0matrix_keys;
+    #         global global_hash_p0matrix_values;
+    #         global global_hash_innov_keys;
+    #         global global_hash_innov_values;
+    #         s1 = whos('global_hash_p0matrix_keys');
+    #         s2 = whos('global_hash_p0matrix_values');
+    #         s3 = whos('global_hash_innov_keys');
+    #         s4 = whos('global_hash_innov_values');
+    #         disp(['Sizes = ' num2str(s1.bytes) ', ' num2str(s2.bytes) ', ' num2str(s3.bytes) ', ' num2str(s4.bytes), ' bytes']);
+    #         disp(['Sizes = ' num2str(s1.bytes/1024/1024) ', ' num2str(s2.bytes/1024/1024) ', ' num2str(s3.bytes/1024/1024) ', ' num2str(s4.bytes/1024/1024), ' MB']);
+    #         disp(['Total size = '  num2str(s1.bytes + s2.bytes + s3.bytes + s4.bytes) ' bytes']);
+    #         disp(['Total size = '  num2str((s1.bytes + s2.bytes + s3.bytes + s4.bytes)/1024/1024) ' MB']);
+    #         
+    #         # Exception or not, clear global variables from global workspace and then pack memory
+    #         clear global *;
+    #         #clear_global_variables();
+    #         #pack;
+    #         
+    #         if ~caught_exception
+    #             if n_helpers > n_helpers_min
+    #                 n_helpers = n_helpers - 10;
+    #             end
+    #             found_network = 1;
+    #             disp('Exception not caught, found network');
+    #             dirnames = [dirnames, num2str(n)];
+    #         end
+    #         
+    #         if n_helpers == n_helpers_max
+    #             n_helpers = n_helpers_min;
+    #             disp('n_helpers = max, re-setting to min');
+    #         end
+    #     end
+    # end
+    # 
+    # #dirnames = {'160', '165'};
+    # 
+    # # write dir to file
+    # fid = fopen(['../scenarios/dirs' num2str(id) '.txt'],'w'); 
+    # for i = 1:numel(dirnames)
+    #     fprintf(fid, '#s\n', dirnames{i});
+    # end
+    # fclose(fid);
+    # 
+    # # create finished file
+    # fid = fopen(['../scenarios/finished' num2str(id)],'w'); 
+    # fprintf(fid, '#s', datestr(clock));
+    # fclose(fid);
+
+
+def generate_example_and_run(folder, varargin):
+    # MATLAB function generate_example_and_run(folder, varargin)
+    #============================================
+    ## Description
+    #============================================
+    # Generates an example network and runs the node selection algorithm
+    #
+    # Nicolae Cleju, EPFL, 2008/2009,
+    #                TUIASI, 2009/2010
+    
+    #============================================
+    
+    #disp('Welcome');
+    print('Welcome')
+    
+    # Generate example
+    #disp('Generating example ...');
+    print('Generating example ...')
+    #if isempty(varargin)
+    if varargin:
+        #[folder, randstate, net, sim, runopts] = generate_example(folder);
+        folder, randstate, net, sim, runopts = generate_example(folder)
+    else:
+        #[folder, randstate, net, sim, runopts] = generate_example(folder, varargin{:});
+        folder, randstate, net, sim, runopts = generate_example(folder, varargin)
+    #end
+    
+    # Run example
+    #disp('Running example');
+    print('Running example')
+    #run_example(folder, randstate, net, sim, runopts);
+    run_example(folder, randstate, net, sim, runopts)
+    
+    ## 
+    #disp('Finished.');
+    print('Finished.')
     
 
 def load_example(folder, varargin):
@@ -528,3 +718,175 @@ def load_example(folder, varargin):
     runopts['rmax'] = rmax;
     
     return folder, randstate, net, sim, runopts
+   
+   
+   
+def load_batch_and_run(dirs, varargin):
+    # MATLAB function load_batch_and_run(dirs, varargin)
+    
+    fulldirs = dict()
+    
+    if numpy.all(numpy.isreal(dirs)):
+        ##basepath = 'E:\Master\MatlabNew\scenarios2\';
+        #basepath = 'E:\Master\Results2\manuscript_iccversion\';
+        basepath = 'E:\\Master\\Results2\\manuscript_iccversion\\'
+        ##basepath = '/home/scs/ncleju/ns3/matlabcode/scenarios2/';
+        ##basepath = '/home/scs/ncleju/ns3/matlabcode/scenarios2/r_a/';
+
+        #for i=1:numel(dirs)
+        for i in xrange(dirs.size):
+            #fulldirs{i} = [basepath num2str(dirs(i))];
+            fulldirs[i] = basepath + str(dirs[i])
+        #end
+    else:
+        fulldirs = dirs
+    #end
+    
+    # TODO: parallel
+    #parfor i=1:numel(fulldirs)
+    for i in xrange(fulldirs.size):
+        try:
+            #load_example_and_run(fulldirs{i}, varargin{:});
+            load_example_and_run(fulldirs[i], varargin)
+        #catch exception
+        except:
+            #disp(['Caught exception: ' exception.identifier ' ' exception.message]);
+            print('Caught exception')
+            #disp(['Could not run scenario ' fulldirs{i}]);
+            print('Could not run scenario ' + fulldirs[i])
+            raise
+        #end
+    #end
+
+
+
+def load_example_and_run(folder, varargin):
+    # MATLAB function load_example_and_run(folder, varargin)
+    #============================================
+    ## Description
+    #============================================
+    # Generates an example network and runs the node selection algorithm
+    #
+    # Nicolae Cleju, EPFL, 2008/2009,
+    #                TUIASI, 2009/2010
+    
+    #============================================
+    
+    # Generate example
+    #disp('Loading example ...');
+    print('Loading example ...')
+    #[folder, randstate, net, sim, runopts] = load_example(folder, varargin{:});
+    folder, randstate, net, sim, runopts = load_example(folder, varargin)
+    
+    # Run example
+    #disp('Running example');
+    print('Running example')
+    #run_example(folder, randstate, net, sim, runopts);
+    run_example(folder, randstate, net, sim, runopts)
+
+
+
+    
+def run_example(folder, randstate, net, sim, runopts):
+    # MATLAB function run_example(folder, randstate, net, sim, runopts)
+    #============================================
+    ## Description
+    #============================================
+    # Runs a loaded scenario
+    #
+    # Nicolae Cleju, EPFL, 2008/2009,
+    #                TUIASI, 2009/2011
+    #============================================
+    
+    # Init winners
+    winners = {}
+    #winners.global_delay = [];
+    winners['global_delay'] = numpy.array([])
+    winners['global_flow']  = numpy.array([])
+    #winners.dist_delay   = {};
+    winners['dist_delay']   = {}
+    winners['dist_flow']    = {}
+    #winners.r = [];
+    winners['r'] = numpy.array([])
+    
+    # First create basic file (nonc, allnodesnc, random)
+    #output_scenario_folder(folder, net, sim, runopts, winners);
+    files.output_scenario_folder(folder, net, sim, runopts, winners)
+    
+    # Run Algorithm 2
+    #if runopts.do_global_delay
+    if runopts['do_global_delay']:
+        #disp('Global, delay:');
+        print('Global, delay:')
+        #winners.global_delay = Algo2_Centralized_NC_sel(net,sim,runopts,'delay');
+        winners['global_delay'] = Algos.Algo2_Centralized_NC_sel(net,sim,runopts,'delay')
+    #end
+    # Save winners
+    #save([folder '/matlab.mat'], 'winners', '-append');
+    mdict = scipy.io.loadmat(folder + '/matlab.mat')
+    mdict['winners'] = winners  # append
+    scipy.io.savemat(folder + '/matlab.mat', mdict)
+    
+    #if runopts.do_global_flow
+    if runopts['do_global_flow']:
+        #disp('Global, flow:');
+        print('Global, flow:')
+        #winners.global_flow = Algo2_Centralized_NC_sel(net,sim,runopts,'flow');
+        winners['global_flow'] = Algos.Algo2_Centralized_NC_sel(net,sim,runopts,'flow')
+    #end
+    # Save winners
+    #save([folder '/matlab.mat'], 'winners', '-append');
+    mdict = scipy.io.loadmat(folder + '/matlab.mat')
+    mdict['winners'] = winners  # append
+    scipy.io.savemat(folder + '/matlab.mat', mdict)
+    
+    # Run Algorithm 3
+    # Set maximum eccentricity (radius)
+    #if runopts.rmax == Inf
+    if runopts['rmax'] == numpy.Inf:
+        #[R D] = breadthdist(net.capacities + net.capacities');
+        R,D = graph.all_pairs_sp(net.capacities + net.capacities.T)
+        #runopts.rmax = max(max(D));
+        runopts.rmax = numpy.max(D)
+    #end
+    
+    #if runopts.do_dist_delay || runopts.do_dist_flow
+    if runopts['do_dist_delay'] or runopts['do_dist_flow']:
+        #winners.r = runopts.rmin:runopts.rstep:runopts.rmax;
+        winners['r'] = numpy.arange(runopts['rmin'], runopts['rmax']+1, runopts['rstep'])
+    #end
+    #if runopts.do_dist_delay
+    if runopts['do_dist_delay']:
+        #for r = runopts.rmin:runopts.rstep:runopts.rmax
+        for r in winners['r']:
+            #disp(['Distributed, delay, r = ' num2str(r) ' :']);
+            print('Distributed, delay, r = ' + str(r) + ' :')
+            #winners.dist_delay{r} = Algo3_Semidistributed_NC_sel(net,sim,runopts,'delay',r);
+            winners['dist_delay'][r] = Algos.Algo3_Semidistributed_NC_sel(net,sim,runopts,'delay',r)
+            # Save winners
+            #save([folder '/matlab.mat'], 'winners', '-append');
+            mdict = scipy.io.loadmat(folder + '/matlab.mat')
+            mdict['winners'] = winners  # append
+            scipy.io.savemat(folder + '/matlab.mat', mdict)
+        #end
+    #end
+    
+    #if runopts.do_dist_flow
+    if runopts['do_dist_flow']:
+        #for r = runopts.rmin:runopts.rstep:runopts.rmax
+        for r in winners['r']:
+            #disp(['Distributed, flow, r = ' num2str(r) ' :']);
+            print('Distributed, flow, r = ' + str(r) + ' :')
+            #winners.dist_flow{r} = Algo3_Semidistributed_NC_sel(net,sim,runopts,'flow',r);
+            winners['dist_flow'][r] = Algos.Algo3_Semidistributed_NC_sel(net,sim,runopts,'flow',r)
+            # Save winners
+            #save([folder '/matlab.mat'], 'winners', '-append');
+            mdict = scipy.io.loadmat(folder + '/matlab.mat')
+            mdict['winners'] = winners  # append
+            scipy.io.savemat(folder + '/matlab.mat', mdict)
+        #end
+    #end
+    
+    # Create files
+    #output_scenario_folder(folder, net, sim, runopts, winners);
+    files.output_scenario_folder(folder, net, sim, runopts, winners)

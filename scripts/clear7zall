@@ -1,0 +1,32 @@
+if [ -e  ../config/config.7z ] ; then
+    if [ -e  ../config/config_nonc.cfg ] ; then
+        echo "Deleting archive ../config/config.7z"
+        find ../config \( -name "config.7z" \) -delete
+    else
+        echo "Decompressed files no detected, aborting"
+    fi
+else
+    echo "Archive ../config/config.7z not found"
+fi
+
+if [ -e  ../ppss/ppss.7z ] ; then
+    if [ -d  ../ppss/job_log ] ; then
+        echo "Deleting archive ../ppss/ppss.7z"
+        find ../ppss \( -name "ppss.7z" \) -delete
+    else
+        echo "Decompressed files no detected, aborting"
+    fi
+else
+    echo "Archive ../ppss/ppss.7z not found"
+fi
+
+if [ -e  ../results/results.7z ] ; then
+    if [ -e  ../results/meantimes_config_nonc.txt ] ; then
+        echo "Deleting archive ../results/results.7z"
+        find ../results \( -name "results.7z" \) -delete
+    else
+        echo "Decompressed files no detected, aborting"
+    fi
+else
+    echo "Archive ../results/results.7z not found"
+fi
