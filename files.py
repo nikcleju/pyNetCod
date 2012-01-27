@@ -566,3 +566,143 @@ def create_config_dat(filepath, data, headers):
     
     #fclose(fid);
     fid.close()
+
+
+def output_scenario_folder(dirname, net, sim, runopts, winners):
+    # MATLAB function output_scenario_folder(dirname, net, sim, runopts, winners)
+    
+    # Creating nonc file
+    #disp('Writing nonc config file ...');
+    #write_config_files([dirname '/config/'], 'config',[], net, sim);
+    write_config_files(dirname + '/config/', 'config',numpy.array([]), net, sim)
+    
+    # Creating all nodes nc file
+    #disp('Writing all nodes nc config file ...');
+    filename = 'config_allnodes'
+    #configfilename = [dirname '/config/' filename '.cfg'];
+    configfilename = dirname + '/config/' + filename + '.cfg'
+    #logfilename = ['clog_' filename '.txt'];
+    logfilename = 'clog_' + filename + '.txt'
+    #resultsfilename = ['meantimes_' filename '.txt'];
+    resultsfilename = 'meantimes_' + filename + '.txt'
+    #create_config_files(configfilename, logfilename, resultsfilename, net.helpers, net, sim);
+    create_config_files(configfilename, logfilename, resultsfilename, net['helpers'], net, sim)
+    
+    # Create random NC config files
+    #disp('Writing random config files ...');
+    #for apriori_random_count = 0:runopts.nNC
+    for apriori_random_count in xrange(runopts['nNC']+1):
+        #filename = ['config_rnd_' num2str(apriori_random_count)];
+        filename = 'config_rnd_' + str(apriori_random_count)
+        #configfilename = [dirname '/config/' filename '.cfg'];
+        configfilename = dirname + '/config/' + filename + '.cfg'
+        #logfilename = ['clog_' filename '.txt'];
+        logfilename = 'clog_' + filename + '.txt'
+        #resultsfilename = ['meantimes_' filename '.txt'];
+        resultsfilename = 'meantimes_' + filename + '.txt'
+        #create_random_config_files(configfilename, logfilename, resultsfilename, apriori_random_count, net, sim);
+        create_random_config_files(configfilename, logfilename, resultsfilename, apriori_random_count, net, sim)
+    #end
+    
+    ## Global
+    
+    # Init tables
+    #global_table = {};
+    global_table = dict()
+    #global_table_header = {};
+    global_table_header = dict()
+    #global_index = 1;
+    global_index = 0
+    # Helpers
+    #global_table{global_index} = net.helpers;
+    global_table[global_index] = net['helpers']
+    #global_table_header{global_index} = 'HELPERS';
+    global_table_header[global_index] = 'HELPERS'
+    #global_index = global_index + 1;
+    global_index = global_index + 1
+    
+    #if runopts.do_global_delay
+    if runopts['do_global_delay']:
+        # Global, delay
+        #disp('Writing global delay config files ...');
+        #write_config_files([dirname '/config/'], 'config',winners.global_delay, net, sim);
+        write_config_files(dirname + '/config/', 'config', winners['global_delay'], net, sim)
+        #global_table{global_index} = winners.global_delay;
+        global_table[global_index] = winners['global_delay']
+        global_table_header[global_index] = 'GLOBDELAY'
+        #global_index = global_index+1;
+        global_index = global_index+1
+    #end
+    #if runopts.do_global_flow
+    if runopts.do_global_flow:
+        # Global, flow
+        #disp('Writing global flow config files ...');
+        #write_config_files([dirname '/config/'], 'config',winners.global_flow, net, sim);
+        write_config_files(dirname + '/config/', 'config', winners['global_flow'], net, sim)
+        #global_table{global_index} = winners.global_flow;
+        global_table[global_index] = winners['global_flow']
+        global_table_header[global_index] = 'GLOBFLOW'
+        global_index = global_index+1
+    #end
+    # Create global config.dat file
+    #disp('Writing config_glob.dat ...');
+    #create_config_dat([dirname '/config_glob.dat'], global_table, global_table_header);
+    create_config_dat(dirname + '/config_glob.dat', global_table, global_table_header)
+    
+    
+    ## Distributed
+    
+    # Distributed, delay
+    #disp('Writing distributed delay config files ...');
+    #for r_idx = 1:numel(winners.r)
+    for r_idx in xrange(winners['r'].size):
+        #r = winners.r(r_idx);
+        r = winners['r'][r_idx]
+        #write_config_files([dirname '/config/'], 'config',winners.dist_delay{r}, net, sim);
+        write_config_files(dirname+'/config/', 'config', winners['dist_delay'][r], net, sim)
+    #end
+    
+    # Distributed, flow
+    #disp('Writing distributed flow config files ...');
+    #for r_idx = 1:numel(winners.r)
+    for r_idx in xrange(winners['r'].size):
+        #r = winners.r(r_idx);
+        r = winners['r'][r_idx]
+        #write_config_files([dirname '/config/'], 'config',winners.dist_flow{r}, net, sim);
+        write_config_files(dirname+'/config/', 'config', winners['dist_flow'][r], net, sim)
+    #end
+    
+    # Create dist delay config.dat file
+    #dist_delay_table{1} = net.helpers;
+    dist_delay_table = {0:net['helpers']}
+    #dist_table_header{1} = 'HELPERS';
+    dist_table_header = {0:'HELPERS'}
+    #for r_idx = 1:numel(winners.r)
+    for r_idx in xrange(winners['r'].size):
+        #dist_table_header{1 + r_idx} = num2str(winners.r(r_idx));
+        dist_table_header[1 + r_idx] = str(winners['r'][r_idx])
+        #dist_delay_table{1 + r_idx} = winners.dist_delay{winners.r(r_idx)};
+        dist_delay_table[1 + r_idx] = winners['dist_delay'][winners['r'][r_idx]]
+    #end
+    #disp('Writing config_dist_delay.dat ...');
+    #create_config_dat([dirname '/config_dist_delay.dat'], dist_delay_table, dist_table_header);
+    create_config_dat(dirname +'/config_dist_delay.dat', dist_delay_table, dist_table_header)
+    
+    # Create dist flow config.dat file
+    #dist_flow_table{1} = net.helpers;
+    dist_flow_table = {0: net['helpers']}
+    #dist_table_header{1} = 'HELPERS';
+    dist_table_header = {0: 'HELPERS'}
+    #for r_idx = 1:numel(winners.r)
+    for r_idx in xrange(winners['r'].size):
+        #dist_table_header{1 + r_idx} = num2str(winners.r(r_idx));
+        dist_table_header[1 + r_idx] = str(winners['r'][r_idx])
+        #dist_flow_table{1 + r_idx} = winners.dist_flow{winners.r(r_idx)};
+        dist_flow_table[1 + r_idx] = winners['dist_flow'][winners['r'][r_idx]]
+    #end
+    #disp('Writing config_dist_flow.dat ...');
+    #create_config_dat([dirname '/config_dist_flow.dat'], dist_flow_table, dist_table_header);
+    create_config_dat(dirname +'/config_dist_flow.dat', dist_flow_table, dist_table_header)
+    
+    #disp(['Written output files to ' dirname]);
+    print('Written output files to '+ dirname)
