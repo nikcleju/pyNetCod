@@ -366,3 +366,165 @@ def generate_example(folder, varargin):
     
     
     return folder, randstate, net, sim, runopts
+    
+
+def load_example(folder, varargin):
+    # MATLAB function [folder, randstate, net, sim, runopts] = load_example(folder, varargin)
+    #============================================
+    ## Description
+    #============================================
+    # Loads an existing scenario (with optional overwriting of parameters)
+    #
+    # Nicolae Cleju, EPFL, 2008/2009,
+    #                TUIASI, 2009/2011
+    
+    #============================================
+    
+    #============================================
+    ## Load saved data
+    #============================================
+    #orig_folder = folder;
+    orig_folder = folder.copy()
+    # This overwrites the variable 'folder'
+    ##load([folder '\32\matlab.mat']);
+    #load([folder '/matlab.mat']);
+    mdict = scipy.io.loadmat(folder + '/matlab.mat')
+    
+    folder = mdict['folder']
+    randstate = mdict['randstate']
+    net = mdict['net']
+    sim = mdict['sim']
+    runopts = mdict['runopts']
+    p = mdict['p']
+    
+    #folder = orig_folder;
+    folder = orig_folder;
+    #clear orig_folder;
+    #disp(['Loaded data from ''' folder '/matlab.mat''']);
+    print("Loaded data from '" + folder + "/matlab.mat'")
+    
+    #============================================
+    ## Parse inputs & default parameter values
+    #============================================
+    varargin['folder'] = folder   # Python
+    
+    #p = inputParser;   # Create instance of inputParser class.
+    p = MatlabInputParser.MatlabInputParser()
+    
+    # Scenario folder
+    p.addRequired('folder',  lambda x: (isinstance(x,str)));
+    
+    # Random state generator
+    p.addParamValue('randstate', randstate, lambda x: (numpy.isreal(x)));
+    
+    # Nodes
+    # p.addParamValue('n_sources',     ,      lambda x: (numpy.isreal(x) and x > 0));
+    # p.addParamValue('n_helpers',     30,     lambda x: (numpy.isreal(x) and x > 0));
+    # p.addParamValue('n_receivers',   3,      lambda x: (numpy.isreal(x) and x > 0));
+    
+    # Packets
+    p.addParamValue('n_packets',     sim['N'],     lambda x: (numpy.isreal(x) and x > 0));
+    p.addParamValue('gf_dim',        sim['gf_dim'],     lambda x: (numpy.isreal(x) and x > 0));
+    p.addParamValue('payload',       sim['pktsize']/8. - 8- sim['N']*(sim['gf_dim']/8.),    lambda x: (numpy.isreal(x) and x > 0));
+    
+    # Simulation options
+    p.addParamValue('nruns',         sim['nruns'],    lambda x: (numpy.isreal(x) and x > 0));
+    p.addParamValue('rndnruns',      sim['rndnruns'],   lambda x: (numpy.isreal(x) and x > 0));
+    p.addParamValue('replication',   sim['replication'],  lambda x: (isinstance(x,str)));              # to add more checking here
+    p.addParamValue('stoptime',      sim['stoptime'],     lambda x: (numpy.isreal(x) and x > 0));
+    
+    # Graph generation
+    # p.addParamValue('maxdistance',   -1,     lambda x: (numpy.isreal(x) and x > 0));   # will be passed to create_graph_planetlab2()
+    # p.addParamValue('maxtries',      100,     lambda x: (numpy.isreal(x) and x > 0));     # will be passed to create_graph_planetlab2()
+    # #p.addParamValue('removeunnecessary', true,     lambda x: (numpy.isreal(x) and x > 0));     # will be passed to create_graph_planetlab2()
+    # p.addParamValue('minnnodes',      15,    lambda x: (numpy.isreal(x) and x > 0));     # will be passed to create_graph_planetlab2()
+    
+    # Run options
+    p.addParamValue('do_global_delay',     runopts['do_global_delay'],    lambda x: (numpy.isreal(x) and x >= 0));     # will be passed to create_graph_planetlab2()
+    p.addParamValue('do_global_flow',      runopts['do_global_flow'],    lambda x: (numpy.isreal(x) and x >= 0));     # will be passed to create_graph_planetlab2()
+    p.addParamValue('do_dist_delay',       runopts['do_dist_delay'],    lambda x: (numpy.isreal(x) and x >= 0));     # will be passed to create_graph_planetlab2()
+    p.addParamValue('do_dist_flow',        runopts['do_dist_flow'],    lambda x: (numpy.isreal(x) and x >= 0));     # will be passed to create_graph_planetlab2()
+    p.addParamValue('nNC',                 runopts['nNC'],    lambda x: (numpy.isreal(x) and x >= 0));     # will be passed to create_graph_planetlab2()
+    #if isfield('runopts','do_old_icc_version')
+    if 'do_old_icc_version' in runopts:
+        #p.addParamValue('do_old_icc_version',  runopts['do_old_icc_version'],    lambda x: (numpy.isreal(x) and x >= 0));     # will be passed to create_graph_planetlab2()
+        p.addParamValue('do_old_icc_version',  runopts['do_old_icc_version'],    lambda x: (numpy.isreal(x) and x >= 0));     # will be passed to create_graph_planetlab2()
+    else:
+        p.addParamValue('do_old_icc_version',  0,    lambda x: (numpy.isreal(x) and x >= 0));     # will be passed to create_graph_planetlab2()
+    #end
+    
+    # Radii for distributed algorithm
+    p.addParamValue('rmin',          runopts['rmin'],      lambda x: (numpy.isreal(x) and x > 0));
+    p.addParamValue('rstep',         runopts['rstep'],      lambda x: (numpy.isreal(x) and x > 0));
+    p.addParamValue('rmax',          runopts['rmax'],    lambda x: (numpy.isreal(x) and x >= 0));
+    
+    # Number of nodes per layer for plotgraph()
+    #p.addParamValue('plotK',         3,      lambda x: (numpy.isreal(x) and x > 0));
+    
+    # Overwrite automatically?
+    #p.addParamValue('auto_overwrite',        0,      lambda x: (numpy.isreal(x) and x >= 0));
+    
+    # ==== Parse ====
+    #p.parse(folder, varargin{:});
+    p.parse(varargin);
+    
+    # ==== Get results ====
+    folder      = p.Results['folder']
+    randstate   = p.Results['randstate']
+    #n_sources   = p.Results.n_sources']
+    #n_helpers   = p.Results.n_helpers']
+    #n_receivers = p.Results.n_receivers']
+    N        = p.Results['n_packets']
+    gf_dim   = p.Results['gf_dim']
+    payload  = p.Results['payload']
+    nruns    = p.Results['nruns']
+    rndnruns = p.Results['rndnruns']
+    replication = p.Results['replication']
+    stoptime = p.Results['stoptime']
+    do_global_delay = p.Results['do_global_delay']
+    do_global_flow = p.Results['do_global_flow']
+    do_dist_delay = p.Results['do_dist_delay']
+    do_dist_flow = p.Results['do_dist_flow']
+    nNC = p.Results['nNC']
+    do_old_icc_version = p.Results['do_old_icc_version']
+    rmin  = p.Results['rmin']
+    rstep = p.Results['rstep']
+    rmax  = p.Results['rmax']
+    #plotK = p.Results.plotK;
+    #auto_overwrite = p.Results.auto_overwrite;
+    
+    ## Init
+    #rand('state',randstate);
+    rng.seed(randstate)
+    
+    # Size of packets
+    # it is used to generate the link capacities in bps in the configuration files
+    # payload = useful packet data, 8 = UDP header size, N = number of NC
+    # coefficients, gf_dim = size of a coefficient (in bytes)
+    pktsize = 8 * (payload + 8 + N*(gf_dim/8))
+    
+    # ===============================
+    ## Create configuration structures
+    # ===============================
+    
+    # simulation options
+    sim['N'] = N;
+    sim['pktsize'] = pktsize;
+    sim['nruns'] = nruns;
+    sim['rndnruns'] = rndnruns;
+    sim['stoptime'] = stoptime;
+    sim['replication'] = replication;
+    sim['gf_dim'] = gf_dim;
+    
+    # run options
+    runopts['do_global_delay'] = do_global_delay;
+    runopts['do_global_flow'] = do_global_flow;
+    runopts['do_dist_delay'] = do_dist_delay;
+    runopts['do_dist_flow'] = do_dist_flow;
+    runopts['nNC'] = nNC;
+    runopts['do_old_icc_version'] = do_old_icc_version;
+    runopts['rmin'] = rmin;
+    runopts['rstep'] = rstep;
+    runopts['rmax'] = rmax;
+    
+    return folder, randstate, net, sim, runopts
