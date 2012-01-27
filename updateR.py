@@ -80,7 +80,7 @@ def compute_Requiv(estim_delay, p0, NI, Rinitial):
         
         # interpolate
         #estim_input_packets_low  = floor(estim_input_packets);
-        estim_input_packets_low  = math.floor(estim_input_packets)
+        estim_input_packets_low  = numpy.floor(estim_input_packets)
         #estim_input_packets_high = estim_input_packets_low + 1;
         estim_input_packets_high = estim_input_packets_low + 1
         #p_low  = estim_input_packets_high - estim_input_packets;
@@ -102,9 +102,18 @@ def compute_Requiv(estim_delay, p0, NI, Rinitial):
             else:
                 #Ri = 1+(Rinitial-1)*sum_inverses_E1E2{estim_input_packets_low};
                 Ri = 1+(Rinitial-1)*globalvars.sum_inverses_E1E2[estim_input_packets_low]
+                # DEBUG
+                print globalvars.sum_inverses_E1E2[estim_input_packets_low]
+                print Rinitial
                 #end
             #Requiv_low = log( sum(p0.^Ri) / estim_input_packets_low ) / log(p0);
             Requiv_low = math.log( numpy.sum(p0**Ri) / estim_input_packets_low ) / math.log(p0)
+            # DEBUG:
+            print estim_input_packets_low
+            print numpy.sum(p0**Ri)
+            print math.log(p0)
+            print p0
+            
         #end    
         
         # high
@@ -145,6 +154,9 @@ def compute_Requiv(estim_delay, p0, NI, Rinitial):
         #if (Requiv < 0)
         if (Requiv < 0):
             #assert(abs(Requiv) < 1e-6);
+            print Requiv # DEBUG
+            print p_low, p_high
+            print Requiv_low, Requiv_high
             assert(abs(Requiv) < 1e-6)
             #Requiv = 0;
             Requiv = 0
@@ -203,7 +215,7 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
             #estim_input_packets_high = estim_input_packets_low + 1;
             #p_low  = estim_input_packets_high - estim_input_packets;
             #p_high = 1 - p_low;
-            estim_input_packets_low  = math.floor(estim_input_packets)
+            estim_input_packets_low  = numpy.int32(numpy.floor(estim_input_packets))
             estim_input_packets_high = estim_input_packets_low + 1
             p_low  = estim_input_packets_high - estim_input_packets
             p_high = 1 - p_low            
@@ -224,7 +236,7 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
             #p0 = p0matrix(indices1,r_idx);
             p0 = p0matrix[indices1,r_idx]
             #p0_2D = repmat(p0matrix(indices1, r_idx), 1, 2*hbuf);
-            p0_2D = numpy.tile(p0matrix[indices1, r_idx], (1, 2*globalvars.hbuf))
+            p0_2D = numpy.tile(numpy.reshape(p0matrix[indices1, r_idx],(-1,1)), (1, 2*globalvars.hbuf))
             #Rinitial = R(r_idx, indices1);
             Rinitial = R[r_idx, indices1]
             #exp_2D = (Rinitial-1)'*[sum_inverses_E1 sum_inverses_E2];
@@ -239,7 +251,7 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
             
             
             #indices2 = ~ismember(1:net.nnodes, ncnodes) & (estim_input_packets_low>0) & (estim_input_packets_low < 2*hbuf) & (R(r_idx,:) > 1) & (p0matrix(:,r_idx) < 1)' & (b_o(:) > b_i(:))';
-            indices2 = numpy.logical_not(numpy.is1d(ncnodes , numpy.arange(net['nnodes'])))
+            indices2 = numpy.logical_not(numpy.in1d(numpy.arange(net['nnodes']), ncnodes))
             indices2 = numpy.logical_and(indices2, estim_input_packets_low>0)
             indices2 = numpy.logical_and(indices2, estim_input_packets_low < 2*globalvars.hbuf)
             indices2 = numpy.logical_and(indices2, R[r_idx,:] > 1)
@@ -248,11 +260,11 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
             #p0 = p0matrix(indices2,r_idx);
             p0 = p0matrix[indices2,r_idx]
             #p0_2D = repmat(p0matrix(indices2, r_idx), 1, 2*hbuf-1);
-            p0_2D = numpy.tile(p0matrix[indices2, r_idx], (1, 2*globalvars.hbuf-1))
+            p0_2D = numpy.tile(numpy.reshape(p0matrix[indices2, r_idx],(-1,1)), (1, 2*globalvars.hbuf-1))
             #Rinitial = R(r_idx, indices2);
             Rinitial = R[r_idx, indices2]
             #exp_2D = repmat( (Rinitial-1)',1, size(sum_inverses_E1E2_mat,2) ).*sum_inverses_E1E2_mat(estim_input_packets_low(indices2),:);
-            exp_2D = numpy.tile( numpy.atleast_2d(Rinitial-1).T, 1, globalvars.sum_inverses_E1E2_mat.shape[1] ) * globalvars.sum_inverses_E1E2_mat[estim_input_packets_low[indices2],:]
+            exp_2D = numpy.tile( numpy.atleast_2d(Rinitial-1).T, (1, globalvars.sum_inverses_E1E2_mat.shape[1] )) * globalvars.sum_inverses_E1E2_mat[estim_input_packets_low[indices2],:]
     
             #sum_p0_Ri = p0 .* sum(p0_2D.^exp_2D, 2);
             sum_p0_Ri = p0 * numpy.sum(p0_2D**exp_2D, 1)
@@ -266,7 +278,7 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
             Requiv_high = R[r_idx, :]
     
             #indices1 = ~ismember(1:net.nnodes, ncnodes) & (estim_input_packets_high>0) & (estim_input_packets_high >= 2*hbuf) & (R(r_idx,:) > 1) & (p0matrix(:,r_idx) < 1)' & (b_o(:) > b_i(:))';
-            indices1 = numpy.logical_not(numpy.is1d(ncnodes , numpy.arange(net['nnodes'])))
+            indices1 = numpy.logical_not(numpy.in1d(numpy.arange(net['nnodes']), ncnodes))
             indices1 = numpy.logical_and(indices1, estim_input_packets_high>0)
             indices1 = numpy.logical_and(indices1, estim_input_packets_high >= 2*globalvars.hbuf)
             indices1 = numpy.logical_and(indices1, R[r_idx,:] > 1)
@@ -275,7 +287,7 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
             #p0 = p0matrix(indices1,r_idx);
             p0 = p0matrix[indices1,r_idx]
             #p0_2D = repmat(p0matrix(indices1, r_idx), 1, 2*hbuf);
-            p0_2D = numpy.tile(p0matrix[indices1, r_idx], (1, 2*globalvars.hbuf))
+            p0_2D = numpy.tile(numpy.reshape(p0matrix[indices1, r_idx],(-1,1)), (1, 2*globalvars.hbuf))
             #Rinitial = R(r_idx, indices1);
             Rinitial = R[r_idx, indices1]
             #exp_2D = (Rinitial-1)'*[sum_inverses_E1 sum_inverses_E2];
@@ -298,11 +310,11 @@ def update_R_vectorized(R, net, p0matrix, ncnodes, tc):
             #p0 = p0matrix(indices2,r_idx);
             p0 = p0matrix[indices2,r_idx]
             #p0_2D = repmat(p0matrix(indices2, r_idx), 1, 2*hbuf-1);
-            p0_2D = numpy.tile(p0matrix[indices2, r_idx], (1, 2*globalvars.hbuf-1))
+            p0_2D = numpy.tile(numpy.reshape(p0matrix[indices2, r_idx],(-1,1)), (1, 2*globalvars.hbuf-1))
             #Rinitial = R(r_idx, indices2);
             Rinitial = R[r_idx, indices2]
             #exp_2D = repmat( (Rinitial-1)',1, size(sum_inverses_E1E2_mat,2) ).*sum_inverses_E1E2_mat(estim_input_packets_high(indices2),:);
-            exp_2D = numpy.tile( numpy.atleast_2d(Rinitial-1).T, 1, globalvars.sum_inverses_E1E2_mat.shape[1] ) * globalvars.sum_inverses_E1E2_mat[estim_input_packets_high[indices2],:]
+            exp_2D = numpy.tile( numpy.atleast_2d(Rinitial-1).T, (1, globalvars.sum_inverses_E1E2_mat.shape[1] )) * globalvars.sum_inverses_E1E2_mat[estim_input_packets_high[indices2],:]
             
             #sum_p0_Ri = p0 .* sum(p0_2D.^exp_2D, 2);
             sum_p0_Ri = p0 * numpy.sum(p0_2D**exp_2D, 1)

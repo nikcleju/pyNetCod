@@ -1,6 +1,6 @@
 
 import numpy
-import math
+#import math
 
 def create_config_files(configfilename, logfilename, resultsfilename, ncnodes, net, sim):
     # MATLAB function create_config_files(configfilename, logfilename, resultsfilename, ncnodes, net, sim)
@@ -29,34 +29,34 @@ def create_config_files(configfilename, logfilename, resultsfilename, ncnodes, n
     except IOError:
         print('file open error')
     
-    file_id.write('//-----------------------------------\r\n')
-    file_id.write('// NetCoding Configuration File\r\n')
-    file_id.write('//-----------------------------------\r\n')
-    file_id.write('\r\n')
+    file_id.write('//-----------------------------------\n')
+    file_id.write('// NetCoding Configuration File\n')
+    file_id.write('//-----------------------------------\n')
+    file_id.write('\n')
     
-    file_id.write('files:\r\n')
-    file_id.write('{\r\n')
-    file_id.write('\tlog = ' + logfilename+ ';\r\n')
-    file_id.write('\tmeantimes = ' + resultsfilename + ';\r\n')
-    file_id.write('};\r\n')
+    file_id.write('files:\n')
+    file_id.write('{\n')
+    file_id.write('\tlog = ' + logfilename+ ';\n')
+    file_id.write('\tmeantimes = ' + resultsfilename + ';\n')
+    file_id.write('};\n')
     
-    file_id.write('channel:\r\n')
-    file_id.write('{\r\n')
-    file_id.write('\tdatarate = "5Mbps";\r\n')
-    file_id.write('\tdelay = "10us";\r\n')
-    file_id.write('};\r\n')
+    file_id.write('channel:\n')
+    file_id.write('{\n')
+    file_id.write('\tdatarate = "5Mbps";\n')
+    file_id.write('\tdelay = "10us";\n')
+    file_id.write('};\n')
     
-    file_id.write('graph:\r\n')
-    file_id.write('{\r\n')
-    file_id.write('\tnnodes = ' + str(nnodes) + ';\r\n')
-    file_id.write('\tlinks = (\r\n')
+    file_id.write('graph:\n')
+    file_id.write('{\n')
+    file_id.write('\tnnodes = ' + str(nnodes) + ';\n')
+    file_id.write('\tlinks = (\n')
     #for i = 1:nnodes
     for i in range(nnodes):
         for j in range(nnodes):
             #if capacities(i,j) ~= 0
             if capacities[i,j] != 0:
-                #file_id.write('\t\t{src=#d; dest=#d; cap="#dbps"; err=#f;},\r\n', i-1, j-1, round(capacities(i,j)*pktsize), errorrates(i,j));
-                file_id.write('\t\t{src='+str(i)+'; dest='+j+'; cap="'+math.round(capacities[i,j]*pktsize)+'bps"; err='+errorrates(i,j)+';},\r\n')
+                #file_id.write('\t\t{src=#d; dest=#d; cap="#dbps"; err=#f;},\n', i-1, j-1, round(capacities(i,j)*pktsize), errorrates(i,j));
+                file_id.write('\t\t{src='+str(i)+'; dest='+str(j)+'; cap="'+str(int(round(capacities[i,j]*pktsize)))+'bps"; err='+str(errorrates[i,j])+';},\n')
             #end
         #end
     #end
@@ -65,16 +65,16 @@ def create_config_files(configfilename, logfilename, resultsfilename, ncnodes, n
     file_id.seek(0, 0)  # bogus seek to avoid matlab 6.5.0 fseek bug
     #fseek(file_id, -3, 'eof');
     file_id.seek( -3, 2)
-    #file_id.write('\r\n');
-    file_id.write('\r\n');
+    #file_id.write('\n');
+    file_id.write('\n');
     
-    file_id.write('\t);\r\n');
-    file_id.write('};\r\n');
+    file_id.write('\t);\n');
+    file_id.write('};\n');
     
     ### nodes
     
-    file_id.write('nodes:\r\n');
-    file_id.write('{\r\n');
+    file_id.write('nodes:\n');
+    file_id.write('{\n');
     
     file_id.write('\tsources = [ ');
     #for i = 1:numel(sources)
@@ -83,7 +83,7 @@ def create_config_files(configfilename, logfilename, resultsfilename, ncnodes, n
         file_id.write(str(sources[i]) + ', ')
     #end
     file_id.seek( -2, 2)
-    file_id.write(' ];\r\n')
+    file_id.write(' ];\n')
     
     file_id.write('\treceivers = [ ')
     #for i = 1:numel(receivers)
@@ -92,7 +92,7 @@ def create_config_files(configfilename, logfilename, resultsfilename, ncnodes, n
     #end
     #fseek(file_id, -2, 'eof');
     file_id.seek( -2, 2)
-    file_id.write(' ];\r\n')
+    file_id.write(' ];\n')
     
     # 	onlyfw = [ 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ];
     
@@ -112,13 +112,13 @@ def create_config_files(configfilename, logfilename, resultsfilename, ncnodes, n
         #fseek(file_id, -2, 'eof');
         file_id.seek( -2, 2)
     #end
-    file_id.write(' ];\r\n');
+    file_id.write(' ];\n');
     
-    file_id.write('\tdatarate = "400kbps"; # this value is overwritten by the graph.links individual values\r\n');
-    file_id.write('\tpacketsize = 512;\r\n');
-    file_id.write('\thelperbuffersize = '+ str(N) +';\r\n');
-    file_id.write('\treceiverbuffersize = 1000;\r\n');
-    file_id.write('\r\n');
+    file_id.write('\tdatarate = "400kbps"; # this value is overwritten by the graph.links individual values\n');
+    file_id.write('\tpacketsize = 512;\n');
+    file_id.write('\thelperbuffersize = '+ str(N) +';\n');
+    file_id.write('\treceiverbuffersize = 1000;\n');
+    file_id.write('\n');
     
     #if ~isempty(find(errorrates > 0, 1))
     if numpy.nonzero(errorrates > 0)[0].size != 0:
@@ -130,33 +130,33 @@ def create_config_files(configfilename, logfilename, resultsfilename, ncnodes, n
         realerrorrate = 0
     #end
     
-    file_id.write('\tpkterrorrate = '+str(realerrorrate)+'; # this value is NOT YET overwritten by the graph.links individual values\r\n')
-    file_id.write('\r\n');
-    file_id.write('\tjitterbits_sigma = 25;\r\n');
-    file_id.write('\tjitterbits_bound = 250;\r\n');
-    file_id.write('};\r\n');
+    file_id.write('\tpkterrorrate = '+str(realerrorrate)+'; # this value is NOT YET overwritten by the graph.links individual values\n')
+    file_id.write('\n');
+    file_id.write('\tjitterbits_sigma = 25;\n');
+    file_id.write('\tjitterbits_bound = 250;\n');
+    file_id.write('};\n');
     
     # netcoding
-    file_id.write('netcoding:\r\n');
-    file_id.write('{\r\n');
-    file_id.write('\tnpackets = '+str(N)+';\r\n');
-    file_id.write('\tnsourcepackets = '+str(N)+';\r\n');
-    file_id.write('\r\n');
-    file_id.write('\tgf_dimension = '+str(gf_dim)+'; // GF(2^dimension)\r\n');
-    file_id.write('};\r\n');
+    file_id.write('netcoding:\n');
+    file_id.write('{\n');
+    file_id.write('\tnpackets = '+str(N)+';\n');
+    file_id.write('\tnsourcepackets = '+str(N)+';\n');
+    file_id.write('\n');
+    file_id.write('\tgf_dimension = '+str(gf_dim)+'; // GF(2^dimension)\n');
+    file_id.write('};\n');
     
     # simulation
-    file_id.write('simulation:\r\n');
-    file_id.write('{\r\n');
-    file_id.write('\tscale = 1;\r\n');
-    file_id.write('\r\n');
-    file_id.write('\tnruns = '+str(nruns)+';\r\n');
-    file_id.write('\tstarttime = 0; 	// seconds\r\n');
-    file_id.write('\tstoptime = '+str(stoptime)+'; 	// seconds\r\n');
-    file_id.write('\treplication = "'+replication+'"; \r\n');
-    file_id.write('};\r\n');
+    file_id.write('simulation:\n');
+    file_id.write('{\n');
+    file_id.write('\tscale = 1;\n');
+    file_id.write('\n');
+    file_id.write('\tnruns = '+str(nruns)+';\n');
+    file_id.write('\tstarttime = 0; 	// seconds\n');
+    file_id.write('\tstoptime = '+str(stoptime)+'; 	// seconds\n');
+    file_id.write('\treplication = "'+replication+'"; \n');
+    file_id.write('};\n');
     
-    file_id.write('### eof\r\n');
+    file_id.write('### eof\n');
     
     #file_status=fclose(file_id);
     file_id.close()
@@ -293,15 +293,15 @@ def create_random_config_files(configfilename, logfilename, resultsfilename, num
     capacities = net['capacities']
     errorrates = net['errorrates']
     sources = net['sources']
-    helpers = net.helpers;
+    helpers = net['helpers']
     receivers = net['receivers']
     
     N = sim['N']
     pktsize = sim['pktsize']
     #nruns = sim['nruns']
-    rndnruns = sim.rndnruns;
+    rndnruns = sim['rndnruns']
     stoptime = sim['stoptime']
-    replication = sim['replication']
+    replication = sim['replication'][0]
     gf_dim = sim['gf_dim']    
     
     #helpers = 1:nnodes;
@@ -317,34 +317,34 @@ def create_random_config_files(configfilename, logfilename, resultsfilename, num
     except IOError:
         print('file open error')
     
-    file_id.write('//-----------------------------------\r\n')
-    file_id.write('// NetCoding Configuration File\r\n')
-    file_id.write('//-----------------------------------\r\n')
-    file_id.write('\r\n')
+    file_id.write('//-----------------------------------\n')
+    file_id.write('// NetCoding Configuration File\n')
+    file_id.write('//-----------------------------------\n')
+    file_id.write('\n')
     
-    file_id.write('files:\r\n')
-    file_id.write('{\r\n')
-    file_id.write('\tlog = ' + logfilename+ ';\r\n')
-    file_id.write('\tmeantimes = ' + resultsfilename + ';\r\n')
-    file_id.write('};\r\n')
+    file_id.write('files:\n')
+    file_id.write('{\n')
+    file_id.write('\tlog = ' + logfilename+ ';\n')
+    file_id.write('\tmeantimes = ' + resultsfilename + ';\n')
+    file_id.write('};\n')
     
-    file_id.write('channel:\r\n')
-    file_id.write('{\r\n')
-    file_id.write('\tdatarate = "5Mbps";\r\n')
-    file_id.write('\tdelay = "10us";\r\n')
-    file_id.write('};\r\n')
+    file_id.write('channel:\n')
+    file_id.write('{\n')
+    file_id.write('\tdatarate = "5Mbps";\n')
+    file_id.write('\tdelay = "10us";\n')
+    file_id.write('};\n')
     
-    file_id.write('graph:\r\n')
-    file_id.write('{\r\n')
-    file_id.write('\tnnodes = ' + str(nnodes) + ';\r\n')
-    file_id.write('\tlinks = (\r\n')
+    file_id.write('graph:\n')
+    file_id.write('{\n')
+    file_id.write('\tnnodes = ' + str(nnodes) + ';\n')
+    file_id.write('\tlinks = (\n')
     #for i = 1:nnodes
     for i in range(nnodes):
         for j in range(nnodes):
             #if capacities(i,j) ~= 0
             if capacities[i,j] != 0:
-                #file_id.write('\t\t{src=#d; dest=#d; cap="#dbps"; err=#f;},\r\n', i-1, j-1, round(capacities(i,j)*pktsize), errorrates(i,j));
-                file_id.write('\t\t{src='+str(i)+'; dest='+j+'; cap="'+math.round(capacities[i,j]*pktsize)+'bps"; err='+errorrates(i,j)+';},\r\n')
+                #file_id.write('\t\t{src=#d; dest=#d; cap="#dbps"; err=#f;},\n', i-1, j-1, round(capacities(i,j)*pktsize), errorrates(i,j));
+                file_id.write('\t\t{src='+str(i)+'; dest='+str(j)+'; cap="'+str(int(round(capacities[i,j]*pktsize)))+'bps"; err='+str(errorrates[i,j])+';},\n')
             #end
         #end
     #end
@@ -353,16 +353,16 @@ def create_random_config_files(configfilename, logfilename, resultsfilename, num
     file_id.seek(0, 0)  # bogus seek to avoid matlab 6.5.0 fseek bug
     #fseek(file_id, -3, 'eof');
     file_id.seek( -3, 2)
-    #file_id.write('\r\n');
-    file_id.write('\r\n');
+    #file_id.write('\n');
+    file_id.write('\n');
     
-    file_id.write('\t);\r\n');
-    file_id.write('};\r\n');
+    file_id.write('\t);\n');
+    file_id.write('};\n');
     
     ### nodes
     
-    file_id.write('nodes:\r\n');
-    file_id.write('{\r\n');
+    file_id.write('nodes:\n');
+    file_id.write('{\n');
     
     file_id.write('\tsources = [ ');
     #for i = 1:numel(sources)
@@ -371,7 +371,7 @@ def create_random_config_files(configfilename, logfilename, resultsfilename, num
         file_id.write(str(sources[i]) + ', ')
     #end
     file_id.seek( -2, 2)
-    file_id.write(' ];\r\n')
+    file_id.write(' ];\n')
     
     file_id.write('\treceivers = [ ')
     #for i = 1:numel(receivers)
@@ -380,7 +380,7 @@ def create_random_config_files(configfilename, logfilename, resultsfilename, num
     #end
     #fseek(file_id, -2, 'eof');
     file_id.seek( -2, 2)
-    file_id.write(' ];\r\n')
+    file_id.write(' ];\n')
     
     # 	onlyfw = [ 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 ];
     
@@ -399,32 +399,32 @@ def create_random_config_files(configfilename, logfilename, resultsfilename, num
         #fseek(file_id, -2, 'eof');
         file_id.seek( -2, 2)
     #end
-    file_id.write(' ];\r\n');
+    file_id.write(' ];\n');
     
     #---------------------------
     # Here random nodes:
     if numberofncnodes > 0:
-        file_id.write('\trandom:	// make some random nodes every simulation\r\n');
-        file_id.write('\t{\r\n');
-        file_id.write('\t\tnnodes = '+numberofncnodes+';\r\n');
+        file_id.write('\trandom:	// make some random nodes every simulation\n');
+        file_id.write('\t{\n');
+        file_id.write('\t\tnnodes = '+str(numberofncnodes)+';\n');
     
         file_id.write('\t\tpossiblenodes = [ ');
         for i in helpers:
             file_id.write(str(i) + ', ')
         #end
         file_id.seek( -2, 2)
-        file_id.write(' ];\r\n');
+        file_id.write(' ];\n');
     
-        file_id.write('\t\ttype = "netcoding"; # how to set the node: "onlyfw" or "netcoding"\r\n');
-        file_id.write('\t};\r\n');
+        file_id.write('\t\ttype = "netcoding"; # how to set the node: "onlyfw" or "netcoding"\n');
+        file_id.write('\t};\n');
     #end
     #---------------------------
     
-    file_id.write('\tdatarate = "400kbps"; # this value is overwritten by the graph.links individual values\r\n');
-    file_id.write('\tpacketsize = 512;\r\n');
-    file_id.write('\thelperbuffersize = '+ str(N) +';\r\n');
-    file_id.write('\treceiverbuffersize = 1000;\r\n');
-    file_id.write('\r\n');
+    file_id.write('\tdatarate = "400kbps"; # this value is overwritten by the graph.links individual values\n');
+    file_id.write('\tpacketsize = 512;\n');
+    file_id.write('\thelperbuffersize = '+ str(N) +';\n');
+    file_id.write('\treceiverbuffersize = 1000;\n');
+    file_id.write('\n');
     
     #if ~isempty(find(errorrates > 0, 1))
     if numpy.nonzero(errorrates > 0)[0].size != 0:
@@ -436,33 +436,33 @@ def create_random_config_files(configfilename, logfilename, resultsfilename, num
         realerrorrate = 0
     #end
     
-    file_id.write('\tpkterrorrate = '+str(realerrorrate)+'; # this value is overwritten by the graph.links individual values\r\n' );
-    file_id.write('\r\n');
-    file_id.write('\tjitterbits_sigma = 25;\r\n');
-    file_id.write('\tjitterbits_bound = 250;\r\n');
-    file_id.write('};\r\n');
+    file_id.write('\tpkterrorrate = '+str(realerrorrate)+'; # this value is overwritten by the graph.links individual values\n' );
+    file_id.write('\n');
+    file_id.write('\tjitterbits_sigma = 25;\n');
+    file_id.write('\tjitterbits_bound = 250;\n');
+    file_id.write('};\n');
     
     # netcoding
-    file_id.write('netcoding:\r\n');
-    file_id.write('{\r\n');
-    file_id.write('\tnpackets = '+str(N)+';\r\n');
-    file_id.write('\tnsourcepackets = '+str(N)+';\r\n');
-    file_id.write('\r\n');
-    file_id.write('\tgf_dimension = '+str(gf_dim)+'; // GF(2^dimension)\r\n');
-    file_id.write('};\r\n');
+    file_id.write('netcoding:\n');
+    file_id.write('{\n');
+    file_id.write('\tnpackets = '+str(N)+';\n');
+    file_id.write('\tnsourcepackets = '+str(N)+';\n');
+    file_id.write('\n');
+    file_id.write('\tgf_dimension = '+str(gf_dim)+'; // GF(2^dimension)\n');
+    file_id.write('};\n');
     
     # simulation
-    file_id.write('simulation:\r\n');
-    file_id.write('{\r\n');
-    file_id.write('\tscale = 1;\r\n');
-    file_id.write('\r\n');
-    file_id.write('\tnruns = '+str(rndnruns)+';\r\n', ); # rndnruns, not nruns
-    file_id.write('\tstarttime = 0; 	// seconds\r\n');
-    file_id.write('\tstoptime = '+str(stoptime)+'; 	// seconds\r\n');
-    file_id.write('\treplication = "'+replication+'"; \r\n');
-    file_id.write('};\r\n');
+    file_id.write('simulation:\n');
+    file_id.write('{\n');
+    file_id.write('\tscale = 1;\n');
+    file_id.write('\n');
+    file_id.write('\tnruns = '+str(rndnruns)+';\n', ); # rndnruns, not nruns
+    file_id.write('\tstarttime = 0; 	// seconds\n');
+    file_id.write('\tstoptime = '+str(stoptime)+'; 	// seconds\n');
+    file_id.write('\treplication = "'+replication+'"; \n');
+    file_id.write('};\n');
     
-    file_id.write('### eof\r\n');
+    file_id.write('### eof\n');
     
     #file_status=fclose(file_id);
     file_id.close()
@@ -540,11 +540,13 @@ def create_config_dat(filepath, data, headers):
     #end
     strheadersarg = strheadersarg[:-1]   # remove last comma
     #strcommand = ['fprintf(fid, [''#'' strheaders ''\n'']' strheadersarg ');' ];
-    strcommand = "fid.write(('#' + strheaders + '\\n').format(" + strheadersarg + "));"
+    #strcommand = "fid.write(('#' + strheaders + '\n').format(" + strheadersarg + "))"
+    strcommand = "fid.write(('#' + strheaders).format(" + strheadersarg + "))"
     # Python: need the following
     #  fid.write(('#' + strheaders + '\\n').format(headers[0],headers[1],headers[2]));
     #eval(strcommand);
     eval(strcommand)
+    fid.write('\n') # replaced newline from strcommand
     
     # print data
     #for i = 1:lenmax
@@ -552,9 +554,9 @@ def create_config_dat(filepath, data, headers):
         #for k = 1:length(data)
         for k in xrange(len(data)):
             #if i <= numel(data{k})
-            if i <= data[k].size:
+            if i < data[k].size: # Python strict equality now, because 0-based
                 #fprintf(fid, '#12d', data{k}(i)-1);
-                fid.write( '#12d', data[k][i])
+                fid.write( '{:12d}'.format(data[k][i]))
             else:
                 #fprintf(fid, '        ');
                 fid.write( '        ')
@@ -634,7 +636,7 @@ def output_scenario_folder(dirname, net, sim, runopts, winners):
         global_index = global_index+1
     #end
     #if runopts.do_global_flow
-    if runopts.do_global_flow:
+    if runopts['do_global_flow']:
         # Global, flow
         #disp('Writing global flow config files ...');
         #write_config_files([dirname '/config/'], 'config',winners.global_flow, net, sim);

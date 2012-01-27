@@ -1,7 +1,8 @@
 import numpy
 import datetime
 
-import topsort
+#import topsort
+import graph
 
 import computings
 import updateR
@@ -48,9 +49,10 @@ def Algo1_delay_computation(net, sim, ncnodes, prev_estim):
     
     # Better estimate replication rates if previous delay estimates available
     #if ~isempty(prev_estim)
-    if prev_estim.size != 0:
+    #if prev_estim.size != 0:
+    if prev_estim:
         #p0matrix_prevestim = compute_p0_matrix(net, prev_estim.ncnodes, R);
-        p0matrix_prevestim = computings.compute_p0_matrix(net, prev_estim.ncnodes, R)
+        p0matrix_prevestim = computings.compute_p0_matrix(net, prev_estim['ncnodes'], R)
         # Update R
         #R = update_R(R, net, p0matrix_prevestim, prev_estim.ncnodes, prev_estim.tc);
         R = updateR.update_R(R, net, p0matrix_prevestim, prev_estim['ncnodes'], prev_estim['tc'])
@@ -95,12 +97,13 @@ def Algo1_delay_computation(net, sim, ncnodes, prev_estim):
             # For each NC node u
             # Go in topo order
             #order = topological_order(sparse(net.capacities));
-            xs, ys = numpy.nonzero(net['capacities'])
-            order = topsort.topsort([(xs[i], ys[i]) for i in range(xs.size)])                
+            #xs, ys = numpy.nonzero(net['capacities'])
+            #order = graph.topological_sort([(xs[i], ys[i]) for i in range(xs.size)])                
+            order = graph.topological_sort(net['capacities'])
             # is member returns a logical array of size(order) with 1 on the
             # positions where the node is in ncnodes
             #ncnodes_topo = order(ismember(order, ncnodes));
-            ncnodes_topo = order(numpy.in1d(order,ncnodes))
+            ncnodes_topo = order[numpy.in1d(order,ncnodes)]
     
             # For each NC node u
             #for u_idx = 1:numel(ncnodes_topo)
@@ -308,7 +311,7 @@ def Algo2_Centralized_NC_sel(net, sim, runopts, crit):
         
         # Find the set of SF nodes
         #SFnodes = setdiff(net.helpers,ncnodes);
-        SFnodes = numpy.setdiff1d(net.helpers,ncnodes)
+        SFnodes = numpy.setdiff1d(net['helpers'],ncnodes)
         
         # Initialize
         #tc_all = Inf * ones(N, numel(net.receivers));
@@ -316,7 +319,7 @@ def Algo2_Centralized_NC_sel(net, sim, runopts, crit):
         #tc = Inf * ones(N,1);
         tc = numpy.Inf * numpy.ones(N)
         #fc_all = zeros(N, numel(net.receivers));
-        fc_all = numpy.zeros((N, net['receivers']))
+        fc_all = numpy.zeros((N, net['receivers'].size))
         #fc = zeros(N,1);
         fc = numpy.zeros(N)
         
@@ -328,12 +331,12 @@ def Algo2_Centralized_NC_sel(net, sim, runopts, crit):
             
             # Turn temporarily u into a NC node
             #ncnodes_temp = union(ncnodes, u);
-            ncnodes_temp = numpy.union1d(ncnodes, u)
+            ncnodes_temp = numpy.union1d(ncnodes, numpy.array([u]))
             
             # Estimate the average decoding delay at the clients tc (using
             # Algorithm 1) with local statistics 
             #if (~runopts.do_old_icc_version)
-            if not runopts.do_old_icc_version:
+            if not runopts['do_old_icc_version']:
                 # Journal version
                 #tc_all(u,:) = Algo1_delay_computation(net, sim, ncnodes_temp, prev_estim);
                 tc_all[u,:] = Algo1_delay_computation(net, sim, ncnodes_temp, prev_estim)
@@ -349,7 +352,8 @@ def Algo2_Centralized_NC_sel(net, sim, runopts, crit):
             #fc_all(u,:) = sim.N ./ tc_all(u,:);
             fc_all[u,:] = sim['N'] / tc_all[u,:]
             #fc(u) = sum(fc_all(u,:), 2);
-            fc[u] = numpy.sum(fc_all[u,:], 1)
+            #fc[u] = numpy.sum(fc_all[u,:], 1)
+            fc[u] = numpy.sum(fc_all[u,:])
         #end
         
         # Find node which minimizes total delay / maximizes total flow

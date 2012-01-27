@@ -1,5 +1,6 @@
 
 import time
+import os
 import os.path
 import shutil
 import numpy
@@ -10,6 +11,7 @@ import create_graph
 import Algos
 import graph
 import files
+import misc
 
 from numpy.random import RandomState
 rng = RandomState()
@@ -17,7 +19,7 @@ rng = RandomState()
 class ExceptionGenerateExample:
     pass
 
-def generate_example(folder, varargin):
+def generate_example(folder, varargin=None):
     # MATLAB function [folder, randstate, net, sim, runopts] = generate_example(folder, varargin)
     #============================================
     ## Description
@@ -27,6 +29,9 @@ def generate_example(folder, varargin):
     # Nicolae Cleju, EPFL, 2008/2009,
     #                TUIASI, 2009/2010
     
+    if varargin == None:
+        varargin = {}
+        
     #============================================
     ## Parse inputs & default parameter values
     #============================================
@@ -39,7 +44,7 @@ def generate_example(folder, varargin):
     p.addRequired('folder',  lambda x: (isinstance(x,str)));
     
     # Random state generator
-    p.addParamValue('randstate', sum(100*time.time()), lambda x: (numpy.isreal(x)));
+    p.addParamValue('randstate', time.time(), lambda x: (numpy.isreal(x)));
     
     # Nodes
     p.addParamValue('n_sources',     1,      lambda x: (numpy.isreal(x) and x > 0));
@@ -123,7 +128,7 @@ def generate_example(folder, varargin):
     # Initialize rand to a different state each time: 
     # randstate = sum(100*clock);
     #rand('state',randstate);
-    rng.seed(randstate)
+    rng.seed(int(randstate))
     
     # Size of packets
     # it is used to generate the link capacities in bps in the configuration files
@@ -169,7 +174,7 @@ def generate_example(folder, varargin):
     
     # ensure receivers have no output links
     #RA(receivers, :) = zeros(numel(receivers), nnodes);
-    RA[receivers, :] = numpy.zeros(receivers.size, nnodes)
+    RA[receivers, :] = numpy.zeros((receivers.size, nnodes))
     
     #caps_pkts = RA;
     caps_pkts = RA.copy()
@@ -328,38 +333,45 @@ def generate_example(folder, varargin):
     #if ~exist(dirname, 'dir')
     if not os.path.isdir(dirname):
         #mkdir(dirname);
-        os.path.mkdir(dirname)
+        os.mkdir(dirname)
     #end
     #if ~exist([dirname '/config'], 'dir')
     #    mkdir([dirname '/config']);
     #end
     if not os.path.isdir(dirname+'/config'):
-        os.path.mkdir(dirname+'/config')
+        os.mkdir(dirname+'/config')
     #if ~exist([dirname '/results'], 'dir')
     #    mkdir([dirname '/results']);
     #end
     if not os.path.isdir(dirname+'/results'):
-        os.path.mkdir(dirname+'/results')
+        os.mkdir(dirname+'/results')
     #if ~exist([dirname '/figs'], 'dir')
     #    mkdir([dirname '/figs']);
     #end
     if not os.path.isdir(dirname+'/figs'):
-        os.path.mkdir(dirname+'/figs')
+        os.mkdir(dirname+'/figs')
     #if ~exist([dirname '/scripts'], 'dir')
     #    mkdir([dirname '/scripts']);
     #end
     if not os.path.isdir(dirname+'/scripts'):
-        os.path.mkdir(dirname+'/scripts')
+        os.mkdir(dirname+'/scripts')
     
     # copy linux script files for simulation
     #copyfile('ppss/ppss.sh', dirname);
-    shutil.copyfile('ppss/ppss.sh', dirname)
+    shutil.copy('ppss/ppss.sh', dirname)
     #copyfile('ppss/runppss.py', dirname);
-    shutil.copyfile('ppss/runppss.py', dirname)
+    shutil.copy('ppss/runppss.py', dirname)
     
     # copy linux scripts for archieving
     #copyfile('scripts/*', [dirname '/scripts']);
-    shutil.copyfile('scripts/*', dirname + '/scripts')
+    #shutil.copy('scripts/*', dirname + '/scripts')
+    # copy all files
+    src_files = os.listdir('scripts')
+    for file_name in src_files:
+        full_file_name = os.path.join('scripts', file_name)
+        if (os.path.isfile(full_file_name)):
+            shutil.copy(full_file_name, dirname + '/scripts')
+
     
     ## Save
     # save graph plot
@@ -367,9 +379,10 @@ def generate_example(folder, varargin):
     
     # Save in matlab.mat
     #save([dirname '/matlab.mat'], 'folder', 'randstate', 'net', 'sim', 'runopts', 'p');
-    mdict = {'folder':folder, 'randstate':randstate, 'net':net, 'sim':sim, 'runopts':runopts, 'p':p}
+    #mdict = {'folder':folder, 'randstate':randstate, 'net':net, 'sim':sim, 'runopts':runopts, 'p':p}
+    # Don't save p, because of the lambda functions    
+    mdict = {'folder':folder, 'randstate':randstate, 'net':net, 'sim':sim, 'runopts':runopts}
     scipy.io.savemat(dirname + '/matlab.mat', mdict)
-    
     
     return folder, randstate, net, sim, runopts
     
@@ -407,7 +420,7 @@ def generate_batch(dirs):
     #end
     
     #for i=1:numel(fulldirs)
-    for i in xrange(fulldirs.size):
+    for i in xrange(len(fulldirs)):
         try:
             #generate_example(fulldirs{i}, 'n_helpers', n_helpers, 'minnnodes', minnnodes, 'rmin', rmin, 'rmax', rmax, 'auto_option', auto_option, 'maxtries', maxtries);
             generate_example(fulldirs[i], {'n_helpers': n_helpers, 'minnnodes': minnnodes, 'rmin': rmin, 'rmax': rmax, 'auto_option': auto_option, 'maxtries': maxtries})
@@ -520,7 +533,7 @@ def generate_batch(dirs):
     # fclose(fid);
 
 
-def generate_example_and_run(folder, varargin):
+def generate_example_and_run(folder, varargin=None):
     # MATLAB function generate_example_and_run(folder, varargin)
     #============================================
     ## Description
@@ -532,6 +545,9 @@ def generate_example_and_run(folder, varargin):
     
     #============================================
     
+    if varargin == None:
+        varargin = {}
+        
     #disp('Welcome');
     print('Welcome')
     
@@ -539,7 +555,7 @@ def generate_example_and_run(folder, varargin):
     #disp('Generating example ...');
     print('Generating example ...')
     #if isempty(varargin)
-    if varargin:
+    if not varargin:
         #[folder, randstate, net, sim, runopts] = generate_example(folder);
         folder, randstate, net, sim, runopts = generate_example(folder)
     else:
@@ -558,7 +574,7 @@ def generate_example_and_run(folder, varargin):
     print('Finished.')
     
 
-def load_example(folder, varargin):
+def load_example(folder, varargin=None):
     # MATLAB function [folder, randstate, net, sim, runopts] = load_example(folder, varargin)
     #============================================
     ## Description
@@ -570,22 +586,53 @@ def load_example(folder, varargin):
     
     #============================================
     
+    if varargin == None:
+        varargin = {}
+    
     #============================================
     ## Load saved data
     #============================================
     #orig_folder = folder;
-    orig_folder = folder.copy()
+    #orig_folder = folder.copy()
+    orig_folder = folder
     # This overwrites the variable 'folder'
     ##load([folder '\32\matlab.mat']);
     #load([folder '/matlab.mat']);
-    mdict = scipy.io.loadmat(folder + '/matlab.mat')
+    #mdict = scipy.io.loadmat(folder + '/matlab.mat', squeeze_me=True)
+    folder, randstate, net, sim, runopts = misc.myloadmat(folder + '/matlab.mat')
     
-    folder = mdict['folder']
-    randstate = mdict['randstate']
-    net = mdict['net']
-    sim = mdict['sim']
-    runopts = mdict['runopts']
-    p = mdict['p']
+    #folder = mdict['folder'][0]
+    #randstate = mdict['randstate'][0,0]
+    #net = mdict['net'][0,0]
+    #sim = mdict['sim'][0,0]
+    #runopts = mdict['runopts'][0,0]
+    #p = mdict['p']
+    
+    # Squeeze arrays after loading from mat file!
+    #for key in net:
+    #    for key in net.dtype.names:
+    #        #if isinstance(net[key], numpy.array):
+    #            net[key] = numpy.squeeze(net[key])
+    #            if net[key].shape == ():
+    #                print key # DEBUG
+    #                while not numpy.isscalar(net[key]):
+    #                    #net[key] = numpy.array([net[key][()]])
+    #                    net[key] = net[key][()]
+    #                net[key] = numpy.array([net[key]])
+    #    for key in sim.dtype.names:
+    #        #if isinstance(sim[key], numpy.array):
+    #            sim[key] = numpy.squeeze(sim[key])
+    #            #if sim[key].shape == ():
+    #            while not numpy.isscalar(sim[key]):
+    #                #sim[key] = numpy.array([sim[key][()]])
+    #                sim[key] = sim[key][()]
+    #    for key in runopts.dtype.names:
+    #        #if isinstance(runopts[key], numpy.array):
+    #            runopts[key] = numpy.squeeze(runopts[key])
+    #            #if runopts[key].shape == ():
+    #            while not numpy.isscalar(runopts[key]):
+    #                #runopts[key] = numpy.array([runopts[key][()]])
+    #                runopts[key] = runopts[key][()]
     
     #folder = orig_folder;
     folder = orig_folder;
@@ -685,7 +732,7 @@ def load_example(folder, varargin):
     
     ## Init
     #rand('state',randstate);
-    rng.seed(randstate)
+    rng.seed(int(randstate))
     
     # Size of packets
     # it is used to generate the link capacities in bps in the configuration files
@@ -721,9 +768,12 @@ def load_example(folder, varargin):
    
    
    
-def load_batch_and_run(dirs, varargin):
+def load_batch_and_run(dirs, varargin=None):
     # MATLAB function load_batch_and_run(dirs, varargin)
-    
+
+    if varargin == None:
+        varargin = {}
+        
     fulldirs = dict()
     
     if numpy.all(numpy.isreal(dirs)):
@@ -760,7 +810,7 @@ def load_batch_and_run(dirs, varargin):
 
 
 
-def load_example_and_run(folder, varargin):
+def load_example_and_run(folder, varargin=None):
     # MATLAB function load_example_and_run(folder, varargin)
     #============================================
     ## Description
@@ -772,6 +822,9 @@ def load_example_and_run(folder, varargin):
     
     #============================================
     
+    if varargin == None:
+        varargin = {}
+        
     # Generate example
     #disp('Loading example ...');
     print('Loading example ...')

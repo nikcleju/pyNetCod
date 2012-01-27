@@ -2,7 +2,8 @@ import math
 import numpy
 import scipy.stats.distributions
 
-import topsort
+#import topsort
+import graph
 import globalvars
 
 def compute_tc(net, sim, ncnodes, N1s, p0s):
@@ -35,7 +36,7 @@ def compute_tc(net, sim, ncnodes, N1s, p0s):
     #for s_idx = 1:numel(net.sources)
     for s_idx in range(net['sources'].size):
         #s = net.sources(s_idx);
-        s = net.sources[s_idx]
+        s = net['sources'][s_idx]
         
         # sim.N = generation size
         #tcu(s) = sim.N / (b_o(s) * (1 - p0s(s)));
@@ -531,7 +532,7 @@ def convmtx(h,N):
 
 def compute_p0_matrix(net, ncnodes, R):
   N = net['capacities'].shape[0]
-  p0matrix = numpy.zeros(N, net['rceivers'].size)
+  p0matrix = numpy.zeros((N, net['receivers'].size))
   for r_index in range(net['receivers'].size):
     p0matrix[:,r_index] = compute_p0_matrix_single_r(net, ncnodes, R, r_index)
   return p0matrix
@@ -572,8 +573,9 @@ def compute_p0_matrix_single_r(net, ncnodes, R, r_index):
 
   # The topological order
   #order = topological_order(sparse(net.capacities));
-  xs, ys = numpy.nonzero(net['capacities'])
-  order = topsort.topsort([(xs[i], ys[i]) for i in range(xs.size)])
+  #xs, ys = numpy.nonzero(net['capacities'])
+  #order = graph.topological_sort([(xs[i], ys[i]) for i in range(xs.size)])
+  order = graph.topological_sort(net['capacities'])
 
   # Init output matrix
   #p0matrix = zeros(N, numel(net.receivers));
@@ -659,7 +661,7 @@ def compute_p0_matrix_single_r(net, ncnodes, R, r_index):
       #children = find(net.capacities(u,:));
       #children = find(capT(:,u));
       #children = numpy.nonzero(net['capacities'][u,:])
-      children = numpy.nonzero(capT[:,u])
+      children = numpy.nonzero(capT[:,u])[0]
       
       # if u has no children, set p0 to 1 (100# loss)
       #  this may happen if u is another receiver sitting before the
@@ -704,7 +706,8 @@ def compute_p0_matrix_single_r(net, ncnodes, R, r_index):
                  #if any(ncnodes == child)
                  #if child == ncnodes
                  #if numpy.any(ncnodes == child):
-                 if ncnodes.contains(child):
+                 #if ncnodes.contains(child):
+                 if child in ncnodes:
                      
                      # child is NC node, make p0 equal to 1, because we exclude paths which go through NC nodes
                      #p0_child = rho * 1; # 100# losses

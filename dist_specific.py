@@ -1,6 +1,6 @@
 import numpy
 import graph
-import topsort
+#import topsort
 
 def create_local_network(net, centralnode, p0matrix, ecc):
     # MATLAB function [localnet local2global global2local] = create_local_network(net, centralnode, p0matrix, ecc)
@@ -193,8 +193,9 @@ def make_node_silent(net,node):
     
     # Compute topological order
     #order = topological_order(sparse(net.capacities));
-    xs, ys = numpy.nonzero(net['capacities'])
-    order = topsort.topsort([(xs[i], ys[i]) for i in range(xs.size)])    
+    #xs, ys = numpy.nonzero(net['capacities'])
+    #order = graph.topological_sort([(xs[i], ys[i]) for i in range(xs.size)])    
+    order = graph.topological_sort(net['capacities'])
     
     # remove node's outgoing links
     #newnet.capacities(node, :) = zeros(1, newnet.nnodes);

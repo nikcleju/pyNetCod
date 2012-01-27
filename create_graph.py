@@ -1,8 +1,13 @@
     
+import numpy
 import scipy.io
 import math
 
-import MatlabInputParser    
+import MatlabInputParser
+import graph
+
+from numpy.random import RandomState
+rng = RandomState()  
 
 def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
     # MATLAB function A = create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin)
@@ -38,8 +43,8 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
     #p.addParamValue('maxdistance', -1, lambda x: (numpy.isreal(x) and x > 0));
     p.addParamValue('maxdistance', -1, lambda x: (numpy.isreal(x)));
     p.addParamValue('maxtries', 50, lambda x: (numpy.isreal(x) and x > 0));
-    p.addParamValue('removeunnecessary', true, lambda x: (numpy.isreal(x) and x > 0));
-    p.addParamValue('minnnodes', 15, lambda x: (isnumeric(x) and x > 0));
+    p.addParamValue('removeunnecessary', True, lambda x: (numpy.isreal(x) and x > 0));
+    p.addParamValue('minnnodes', 15, lambda x: (numpy.isreal(x) and x > 0));
     #p.parse(n_sources, n_helpers, n_receivers, varargin{:});
     p.parse(varargin)
     n_sources   = p.Results['n_sources']
@@ -67,9 +72,10 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
     try:
         mdict = scipy.io.loadmat('planetlab_data.mat')
         M = mdict['M']
-    except e:
+        Nmax = mdict['Nmax']
+    except:
         print("Error: couldn't load 'planetlab_data.mat'");
-        raise e
+        raise
         #        fid = fopen('planetlab.txt');
         #        C = textscan(fid, '#s #s #n #n #n #n #n #n', 'Delimiter',',', 'HeaderLines', 1, 'TreatAsEmpty', 'N/A');
         #        fclose(fid);
@@ -129,7 +135,7 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
         #    end
     
     #M(isnan(M)) = 0;
-    M(numpy.isnan(M)) = 0
+    M[numpy.isnan(M)] = 0
     
     # assuming a packet of 1024B payload, 8B UDP header, 2*32B NC coeffs header
     ##pktsize = (1024 + 8 + 2*32) * 8; # in bps
@@ -163,19 +169,23 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
         #while numel(reachables) < (n_helpers + n_receivers)
         while reachables.size < (n_helpers + n_receivers):
             #s = [];
-            s = numpy.array([])
+            #s = numpy.array([])
+            s = []
             #for i = 1:n_sources
             for i in xrange(n_sources):
                 #newsource = ceil(Nmax * rand());
-                newsource = math.ceil(Nmax * rng.rand())
+                #newsource = math.ceil(Nmax * rng.rand())
+                newsource = math.floor(Nmax * rng.rand()) # floor() because now we are 0-based
                 #while ~isempty(find(s == newsource))
-                while numpy.nonzero(s == newsource).size != 0:
+                while numpy.nonzero(s == newsource)[0].size != 0:
                     #newsource = ceil(Nmax * rand());
-                    newsource = math.ceil(Nmax * rng.rand())
+                    #newsource = math.ceil(Nmax * rng.rand())
+                    newsource = math.floor(Nmax * rng.rand())  # floor() because now we are 0-based
                 #end
                 
-                #s(i) = newsource;
-                s[i] = newsource
+                ##s(i) = newsource;
+                #s[i] = newsource
+                s.append(newsource)
     
                 #[d pred] = shortest_paths(M, s(i));
                 d = graph.shortest_paths(M, s[i])
@@ -190,9 +200,9 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
         #end
         
         #allnodes = s;
-        allnodes = s.copy()
+        allnodes = numpy.array(s)
         #allnodesnotreceivers = s;
-        allnodesnotreceivers = s.copy()
+        allnodesnotreceivers = numpy.array(s)
     
         # choose helper nodes
         #for i = (n_sources+1):nnodes
@@ -206,11 +216,12 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
             isreachable = 0
     
             #while ~isempty(find(allnodes == newnode)) || ~isreachable
-            while numpy.nonzero(allnodes == newnode).size !=0 or not isreachable:
+            while numpy.nonzero(allnodes == newnode)[0].size !=0 or not isreachable:
                 
                 # choose random new node
                 #newnode = ceil(Nmax * rand());
-                newnode = math.ceil(Nmax * rng.rand())
+                #newnode = math.ceil(Nmax * rng.rand())
+                newnode = math.floor(Nmax * rng.rand())  # floor() because now we are 0-bases
     
                 # choose num_parents parents out of the previous nodes
                 #parents = [];
@@ -220,7 +231,7 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
                     #parents = allnodesnotreceivers;
                     parents = allnodesnotreceivers.copy()
                     #parents_indexes = 1:numel(allnodesnotreceivers);
-                    parents_indexes = numpy.arage(allnodesnotreceivers)
+                    parents_indexes = numpy.arange(allnodesnotreceivers.size)
                 else:
                     
                     # Select only parents which are distant from sources ?
@@ -235,7 +246,7 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
                         #while ~enough_candidate_parents && dp > 0
                         while not enough_candidate_parents and dp > 0:
                             #candidate_parents_indexes = find(parent_distance >= dp*max(parent_distance));
-                            candidate_parents_indexes = numpy.nonzero(parent_distance >= dp*numpy.max(parent_distance))
+                            candidate_parents_indexes = numpy.nonzero(parent_distance >= dp*numpy.max(parent_distance))[0]
                             #if numel(candidate_parents_indexes) < num_parents
                             if candidate_parents_indexes.size < num_parents:
                                 #dp = dp - 0.1;
@@ -256,7 +267,9 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
                     #end
                     
                     #perm = randperm(numel(candidate_parents_indexes));
-                    perm = rng.shuffle(numpy.arange(candidate_parents_indexes.size))
+                    #perm = rng.shuffle(numpy.arange(candidate_parents_indexes.size))
+                    #perm = numpy.random.shuffle(numpy.arange(candidate_parents_indexes.size))
+                    perm = numpy.random.permutation(candidate_parents_indexes.size)
                     #parents_indexes = candidate_parents_indexes[perm[:num_parents]]
                     parents_indexes = candidate_parents_indexes[perm[:num_parents]]
                     #parents = allnodesnotreceivers(parents_indexes);
@@ -266,7 +279,8 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
     
                 # create corresponding column in the overlay graph matrix G
                 #newcolumn = zeros(nnodes, 1);
-                newcolumn = numpy.zeros((nnodes, 1))
+                #newcolumn = numpy.zeros((nnodes, 1))
+                newcolumn = numpy.zeros(nnodes)
                 #for j = 1:numel(parents_indexes)
                 for j in xrange(parents_indexes.size):
                     #newcolumn(parents_indexes(j)) = M(parents(j), newnode);
@@ -275,7 +289,7 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
     
                 # if at least one input connection is non-zero, add node
                 #if ~isempty(find(newcolumn))
-                if numpy.nonzero(newcolumn).size != 0:
+                if numpy.nonzero(newcolumn)[0].size != 0:
                     #isreachable = true;
                     isreachable = True
                 else:
@@ -287,7 +301,7 @@ def create_graph_planetlab3(n_sources, n_helpers, n_receivers, varargin):
             
             # add node
             #allnodes = [allnodes newnode];
-            allnodes = numpy.hstack((allnodesn, newnode))
+            allnodes = numpy.hstack((allnodes, newnode))
             #G(:,i) = newcolumn;
             G[:,i] = newcolumn
             #if nnodes - numel(allnodes) >= n_receivers

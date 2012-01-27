@@ -51,3 +51,12 @@ def shortest_paths(m, source):
             D[i] = d[i]
         else:
             D[i] = numpy.Inf
+    return D
+            
+def topological_sort(m):
+    G = networkx.DiGraph()
+    G.add_nodes_from(range(m.shape[0]))
+    nzx, nzy = numpy.nonzero(m)
+    G.add_edges_from([(nzx[i],nzy[i]) for i in range(nzx.size)])
+    
+    return numpy.array(networkx.topological_sort(G))
