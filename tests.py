@@ -3,10 +3,7 @@ import numpy
 
 import examples
 
-def test1():
-    examples.generate_batch(numpy.array([1]))
-
-def test2():
+def testCreate():
     n_helpers = 50
     minnnodes = 30
     rmin = 1
@@ -14,7 +11,9 @@ def test2():
     auto_option = 'a'
     maxtries = 100
     
-    #examples.generate_example('D:\\Nic\\Dev\\ExNC\\1', {'n_helpers': n_helpers, 'minnnodes': minnnodes, 'rmin': rmin, 'rmax': rmax, 'auto_option': auto_option, 'maxtries': maxtries})    
+    examples.generate_example('D:\\Nic\\Dev\\ExNC\\1', {'n_helpers': n_helpers, 'minnnodes': minnnodes, 'rmin': rmin, 'rmax': rmax, 'auto_option': auto_option, 'maxtries': maxtries})    
+
+def testLoadRun():
     examples.load_example_and_run('D:\\Nic\\Dev\\ExNC\\1')
 
 if __name__ == "__main__":
