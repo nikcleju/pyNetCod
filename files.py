@@ -301,7 +301,7 @@ def create_random_config_files(configfilename, logfilename, resultsfilename, num
     #nruns = sim['nruns']
     rndnruns = sim['rndnruns']
     stoptime = sim['stoptime']
-    replication = sim['replication'][0]
+    replication = sim['replication']
     gf_dim = sim['gf_dim']    
     
     #helpers = 1:nnodes;

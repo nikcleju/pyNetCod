@@ -54,8 +54,6 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
     # MATLAB function tcu = compute_tc_u(net, sim, ncnode, N1, p0)
     #========================================================
     
-    global hbuf
-    
     # Compute b_o
     #b_o = sum(net.capacities, 2);
     b_o = numpy.sum(net['capacities'],1)
@@ -86,7 +84,7 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             
             # Eq(13): Expected value
             #exp_N1 = sum( t1(:, sim.N+1 )' .* (0:(size(t1,1)-1)) );
-            exp_N1 = numpy.sum( t1[:, sim['N']+1 ] * numpy.arange(t1.shape[0]) )
+            exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
             
             # safety check: it might be possible to have exp_N1 = 32 - 1e-x
             #if ((32-1e-2) <= exp_N1) && (exp_N1 < 32)
@@ -96,7 +94,7 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             #end
             # safety check
             #if exp_N1 < sim.N  || t(end) < (1 - 1e-2)
-            if exp_N1 < sim['N'] or t[-1] < (1. - 1e-2):
+            if exp_N1 < sim['N'] or t[-1,-1] < (1. - 1e-2):
                 #exp_N1 = Inf;   # totallines not enough, t1 not complete
                 exp_N1 = numpy.Inf;   # totallines not enough, t1 not complete
             #end
@@ -167,8 +165,8 @@ def compute_pcond_table(N, p0, R, totallines):
     ##bino_table_high   = binopdf(1:R_high, R_high, 1-p0);
     #bino_table_zero_low    = binopdf(0:R_low, R_low, 1-p0);
     #bino_table_zero_high   = binopdf(0:R_high, R_high, 1-p0);    
-    bino_table_zero_low    = scipy.stats.distributions.binom.pmf(numpy.arange(1,(R_low+1)), R_low, 1.-p0)
-    bino_table_zero_high   = scipy.stats.distributions.binom.pmf(numpy.arange(1,(R_high+1)), R_high, 1.-p0)
+    bino_table_zero_low    = scipy.stats.distributions.binom.pmf(numpy.arange(0,(R_low+1)), R_low, 1.-p0)
+    bino_table_zero_high   = scipy.stats.distributions.binom.pmf(numpy.arange(0,(R_high+1)), R_high, 1.-p0)
     
     #bino_table_zero_low_convmtx  = convmtx(bino_table_zero_low,  N + 1);
     #bino_table_zero_low_convmtx_summed  = bino_table_zero_low_convmtx;
@@ -176,7 +174,7 @@ def compute_pcond_table(N, p0, R, totallines):
     #bino_table_zero_low_convmtx_summed = bino_table_zero_low_convmtx_summed(:,1:(N+1));
     bino_table_zero_low_convmtx  = convmtx(bino_table_zero_low,  N + 1)
     bino_table_zero_low_convmtx_summed  = bino_table_zero_low_convmtx
-    bino_table_zero_low_convmtx_summed[:,N] = numpy.sum(bino_table_zero_low_convmtx_summed[:,N:(N + bino_table_zero_low.size())], 1)
+    bino_table_zero_low_convmtx_summed[:,N] = numpy.sum(bino_table_zero_low_convmtx_summed[:,N:(N + bino_table_zero_low.size)], 1)
     bino_table_zero_low_convmtx_summed = bino_table_zero_low_convmtx_summed[:,:(N+1)]
 
     #bino_table_zero_high_convmtx = convmtx(bino_table_zero_high, N + 1);
@@ -185,7 +183,7 @@ def compute_pcond_table(N, p0, R, totallines):
     #bino_table_zero_high_convmtx_summed = bino_table_zero_high_convmtx_summed(:,1:(N+1));
     bino_table_zero_high_convmtx = convmtx(bino_table_zero_high, N + 1)
     bino_table_zero_high_convmtx_summed  = bino_table_zero_high_convmtx;
-    bino_table_zero_high_convmtx_summed[:,N] = numpy.sum(bino_table_zero_high_convmtx_summed[:,N:(N + bino_table_zero_high.size())], 1)
+    bino_table_zero_high_convmtx_summed[:,N] = numpy.sum(bino_table_zero_high_convmtx_summed[:,N:(N + bino_table_zero_high.size)], 1)
     bino_table_zero_high_convmtx_summed = bino_table_zero_high_convmtx_summed[:,:(N+1)]
     
     #bino_table_zero_both_convmtx_summed_weightedsum = p_low * bino_table_zero_low_convmtx_summed + p_high * bino_table_zero_high_convmtx_summed;
@@ -227,7 +225,7 @@ def compute_pcond_table(N, p0, R, totallines):
         t2_1 = numpy.convolve(t[i,:], bino_table_zero_low)
         t2_1[i+1] = numpy.sum(t2_1[(i+1):])
         t2_1 = t2_1[:(i+2)]
-        t2_1 = numpy.concatenate((t2_1, numpy.zeros(N - i)))
+        t2_1 = numpy.concatenate((t2_1, numpy.zeros(N - i - 1)))
 
         #t2_2 = conv(t(i,:), bino_table_zero_high);
         #t2_2(i+1) = sum(t2_2((i+1):numel(t2_2)));
@@ -237,7 +235,7 @@ def compute_pcond_table(N, p0, R, totallines):
         t2_2 = numpy.convolve(t[i,:], bino_table_zero_high)
         t2_2[i+1] = numpy.sum(t2_2[(i+1):])
         t2_2 = t2_2[:(i+2)]
-        t2_2 = numpy.concatenate((t2_2, numpy.zeros( N - i)))
+        t2_2 = numpy.concatenate((t2_2, numpy.zeros( N - i - 1)))
     
         #t2 = p_low * t2_1 + p_high * t2_2;
         t2 = p_low * t2_1 + p_high * t2_2
@@ -251,7 +249,7 @@ def compute_pcond_table(N, p0, R, totallines):
     
     
     #for i = (N+1):(totallines-1)
-    for i in range(N+1,totallines):
+    for i in range(N,totallines-1):
         #     for j = 1:(N-1)
         #         limit = min(j, R);
         #         k = 1:limit;
@@ -291,14 +289,14 @@ def compute_pcond_table(N, p0, R, totallines):
         #if mod(i+1,20) == 0 # check every 20 lines
         if (i+1)%20 == 0: # check every 20 lines
             #if t(i+1, N+1) > (1-1e-3)
-            if t[i+1, N+1] > (1-1e-3):
+            if t[i+1, N] > (1-1e-3):
                 break
             #end
         #end
     #end
     
     #t = t(1:(i+1),:);
-    t = t[:(i+2),:]
+    t = t[:(i+1),:]
     
     # if ~all( abs(sum(t, 2) - ones(totallines,1)) < 1e-4)
     #     assert(all( abs(sum(t, 2) - ones(totallines,1)) < 1e-4));
@@ -380,9 +378,10 @@ def compute_pcond_firsttime_table(t, N, p0, R):
     #betainc_table_high = betainc(p0, R_high-k+1, k, 'upper');
     k = numpy.arange(1,R_low+1)
     # betainc(... 'upper') = 1 - betainc(...)
-    betainc_table_low  = 1 - scipy.special.betainc(p0, R_low-k+1, k)
+    # Scipy betainc() takes p as the last argument!
+    betainc_table_low  = 1 - scipy.special.betainc(R_low-k+1, k, p0)
     k = numpy.arange(1,R_high+1)
-    betainc_table_high = 1 - scipy.special.betainc(p0, R_high-k+1, k)
+    betainc_table_high = 1 - scipy.special.betainc(R_high-k+1, k, p0)
     
     # If numel(betainc_table_low) > 2000, do row by row processing (slower)
     # Otherwise compute convolution matrix (faster, more moemory)
@@ -413,14 +412,14 @@ def compute_pcond_firsttime_table(t, N, p0, R):
             #t2_1 = t2_1(1:(i+1));
             t2_1 = t2_1[:(i+2)]
             #t2_1 = padarray(t2_1, [0 33 - i - 1] , 0,'post');
-            t2_1 = numpy.hstack((t2_1, numpy.zeros(t2_1.shape[0], 33-i-2)))
+            t2_1 = numpy.hstack((t2_1, numpy.zeros((t2_1.shape[0], 33-i-2))))
     
             #t2_2 = [0 conv(t(i, 1:i), betainc_table_high)];
             t2_2 = numpy.hstack((0, numpy.convolute(t[i, :(i+1)], betainc_table_high)))
             #t2_2 = t2_2(1:(i+1));
             t2_2 = t2_2[:(i+2)]
             #t2_2 = padarray(t2_2, [0 33 - i - 1] , 0,'post');
-            t2_2 = numpy.hstack((t2_2, numpy.zeros(t2_2.shape[0], 33-i-2)))
+            t2_2 = numpy.hstack((t2_2, numpy.zeros((t2_2.shape[0], 33-i-2))))
     
             #t2 = p_low * t2_1 + p_high * t2_2;
             t2 = p_low * t2_1 + p_high * t2_2
@@ -433,7 +432,7 @@ def compute_pcond_firsttime_table(t, N, p0, R):
         #end
     
         #for i = (N+1):(totallines-1)
-        for i in range((N+1),totallines-1):
+        for i in range(N,totallines-1):
             #     for j = 1:N
             #         limit = min(j, R);
             #         k = 1:limit;
@@ -484,13 +483,13 @@ def compute_pcond_firsttime_table(t, N, p0, R):
         #res_low = tl * cm_low;
         res_low = numpy.dot(tl , cm_low)
         #res_low = [zeros(totallines,1)  res_low(:,1:N)];
-        res_low = numpy.hstack((numpy.zeros(totallines,1), res_low[:,:N]))
+        res_low = numpy.hstack((numpy.zeros((totallines,1)), res_low[:,:N]))
     
         # convolve t1 with betainc_table_high by multipliying with conv matrix
         #res_high = tl * cm_high;
         res_high = numpy.dot(tl , cm_high)
         #res_high = [zeros(totallines,1)  res_high(:,1:N)];
-        res_high = numpy.hstack((numpy.zeros(totallines,1), res_high[:,:N]))
+        res_high = numpy.hstack((numpy.zeros((totallines,1)), res_high[:,:N]))
     
         # add
         #res = p_low * res_low + p_high * res_high;

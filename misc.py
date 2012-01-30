@@ -1,12 +1,7 @@
 # misc
 
-import scipy.io
-
-def myloadmat(filename):
+def fixmatlabload(mdict):
     
-    #mdict = scipy.io.loadmat(filename, squeeze_me=True)
-    mdict = scipy.io.loadmat(filename)
-
     folder = mdict['folder'][0]
     randstate = mdict['randstate'][0,0]
 
@@ -42,4 +37,21 @@ def myloadmat(filename):
     runopts['rstep'] = mdict['runopts']['rstep'][0,0][0,0]
     runopts['rmax'] = mdict['runopts']['rmax'][0,0][0,0]
     
+    # Convert from MATLAB 1-based node numbering to Python 0-based numbering
+    net['sources'] = net['sources'] - 1
+    net['helpers'] = net['helpers'] - 1
+    net['receivers'] = net['receivers'] - 1    
+    
+    # Convert to ints
+    sim['N'] = int(sim['N'])
+    
     return folder, randstate, net, sim, runopts
+    
+def fixmatlabsave(mdict):
+    # Convert to MATLAB 1-based node numbering    
+    mdict['net']['sources'] = mdict['net']['sources'] + 1
+    mdict['net']['helpers'] = mdict['net']['helpers'] + 1
+    mdict['net']['receivers'] = mdict['net']['receivers'] + 1
+    
+    # Convert to doubles
+    mdict['sim']['N'] = float(mdict['sim']['N'])

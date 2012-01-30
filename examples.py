@@ -382,7 +382,7 @@ def generate_example(folder, varargin=None):
     #mdict = {'folder':folder, 'randstate':randstate, 'net':net, 'sim':sim, 'runopts':runopts, 'p':p}
     # Don't save p, because of the lambda functions    
     mdict = {'folder':folder, 'randstate':randstate, 'net':net, 'sim':sim, 'runopts':runopts}
-    scipy.io.savemat(dirname + '/matlab.mat', mdict)
+    scipy.io.savemat(dirname + '/matlab.mat', misc.fixmatlabsave(mdict))
     
     return folder, randstate, net, sim, runopts
     
@@ -598,8 +598,8 @@ def load_example(folder, varargin=None):
     # This overwrites the variable 'folder'
     ##load([folder '\32\matlab.mat']);
     #load([folder '/matlab.mat']);
-    #mdict = scipy.io.loadmat(folder + '/matlab.mat', squeeze_me=True)
-    folder, randstate, net, sim, runopts = misc.myloadmat(folder + '/matlab.mat')
+    mdict = scipy.io.loadmat(folder + '/matlab.mat')
+    folder, randstate, net, sim, runopts = misc.fixmatlabload(mdict)
     
     #folder = mdict['folder'][0]
     #randstate = mdict['randstate'][0,0]
@@ -857,8 +857,8 @@ def run_example(folder, randstate, net, sim, runopts):
     winners['global_delay'] = numpy.array([])
     winners['global_flow']  = numpy.array([])
     #winners.dist_delay   = {};
-    winners['dist_delay']   = {}
-    winners['dist_flow']    = {}
+    winners['dist_delay']   = {'guard': 'dict must be non-empty otherwise scipy.io.savemat() fails'}
+    winners['dist_flow']    = {'guard': 'dict must be non-empty otherwise scipy.io.savemat() fails'}
     #winners.r = [];
     winners['r'] = numpy.array([])
     
@@ -898,7 +898,7 @@ def run_example(folder, randstate, net, sim, runopts):
     #if runopts.rmax == Inf
     if runopts['rmax'] == numpy.Inf:
         #[R D] = breadthdist(net.capacities + net.capacities');
-        R,D = graph.all_pairs_sp(net.capacities + net.capacities.T)
+        R,D = graph.all_pairs_sp(net['capacities'] + net['capacities'].T)
         #runopts.rmax = max(max(D));
         runopts.rmax = numpy.max(D)
     #end

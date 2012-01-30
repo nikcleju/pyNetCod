@@ -1,6 +1,6 @@
 import numpy
 import graph
-#import topsort
+import copy
 
 def create_local_network(net, centralnode, p0matrix, ecc):
     # MATLAB function [localnet local2global global2local] = create_local_network(net, centralnode, p0matrix, ecc)
@@ -175,7 +175,10 @@ def make_node_silent(net,node):
     
     # Create output structure
     #newnet = net;
-    newnet = net.copy()
+    #newnet = net.copy()
+    # BUG: dict.copy() is shallow copy, so the underlying arrays were not copied    
+    #  use copy.deepcopy() instead
+    newnet = copy.deepcopy(net)
     
     # Compute the original NI and NO
     #NI = sum(net.capacities .* (1-net.errorrates), 1);
