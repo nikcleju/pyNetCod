@@ -383,6 +383,7 @@ def Algo2_Centralized_NC_sel(net, sim, runopts, crit):
         #ncnodes = [ncnodes sel_u];
         ncnodes = numpy.hstack((ncnodes, sel_u))
         ## disp(['Selected node ' num2str(sel_u)]);
+        print "Selected node no.",u_idx,':',u
     #end
     
     #disp([datestr(now) ': Selected nodes = ' num2str(ncnodes)]);

@@ -55,3 +55,5 @@ def fixmatlabsave(mdict):
     
     # Convert to doubles
     mdict['sim']['N'] = float(mdict['sim']['N'])
+    
+    return mdict
