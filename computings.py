@@ -287,7 +287,10 @@ def compute_pcond_table(N, p0, R, totallines):
         
         # check if not almost finished, to reduce computing
         #if mod(i+1,20) == 0 # check every 20 lines
-        if (i+1)%20 == 0: # check every 20 lines
+        # BUG: Because Matlab is 1-based, while it checks at lines 20, 40 etc,
+        #  this actually means in Python 19, 39, etc. So check (i+2)%20 instead
+        #if (i+1)%20 == 0: # check every 20 lines
+        if (i+2)%20 == 0: # check every 20 lines
             #if t(i+1, N+1) > (1-1e-3)
             if t[i+1, N] > (1-1e-3):
                 break
@@ -296,7 +299,7 @@ def compute_pcond_table(N, p0, R, totallines):
     #end
     
     #t = t(1:(i+1),:);
-    t = t[:(i+1),:]
+    t = t[:(i+2),:]
     
     # if ~all( abs(sum(t, 2) - ones(totallines,1)) < 1e-4)
     #     assert(all( abs(sum(t, 2) - ones(totallines,1)) < 1e-4));

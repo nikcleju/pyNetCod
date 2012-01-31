@@ -59,4 +59,58 @@ def topological_sort(m):
     nzx, nzy = numpy.nonzero(m)
     G.add_edges_from([(nzx[i],nzy[i]) for i in range(nzx.size)])
     
-    return numpy.array(networkx.topological_sort(G))
+    #preorder = networkx.dfs_preorder_nodes(G)
+    #return numpy.array(networkx.topological_sort(G, preorder))
+    return numpy.array(topo_sort_like_bgl(G))
+
+def topo_sort_like_bgl(G):
+    """
+    Variant of networkx.topological_sort() that returns a topological order
+    that should be identical to the one returrned by BGL topological_sort()
+    function.
+    
+    Modifications:
+        1. sort the childeren of a visited node (sometimes was not ordered)
+        2. reverse the list of new nodes before adding to the big list
+    
+    """
+    if not G.is_directed():
+        raise networkx.NetworkXError(
+                "Topological sort not defined on undirected graphs.")
+    
+    # nonrecursive version
+    seen={}
+    order_explored=[] # provide order and 
+    explored={}       # fast search without more general priorityDictionary
+    
+    #if nbunch is None:
+    nbunch = G.nodes_iter() 
+    for v in nbunch:     # process all vertices in G
+        if v in explored: 
+            continue
+        fringe=[v]   # nodes yet to look at
+        while fringe:
+            w=fringe[-1]  # depth first search
+            if w in explored: # already looked down this branch
+                fringe.pop()
+                continue
+            seen[w]=1     # mark as seen
+            # Check successors for cycles and for new nodes
+            new_nodes=[]
+            # Nic: sort G[w] because sometimes the children are not in order
+            #for n in G[w]:
+            for n in sorted(G[w]): 
+                if n not in explored:
+                    if n in seen: #CYCLE !!
+                        raise networkx.NetworkXUnfeasible("Graph contains a cycle.")
+                    new_nodes.append(n)
+            if new_nodes:   # Add new_nodes to fringe:
+                # Nic: reverse here the list of children
+                new_nodes.reverse() # Added by Nic
+                fringe.extend(new_nodes)
+                
+            else:           # No new nodes so w is fully explored
+                explored[w]=1
+                order_explored.insert(0,w) # reverse order explored
+                fringe.pop()    # done considering this node
+    return order_explored
