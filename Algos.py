@@ -385,7 +385,7 @@ def Algo2_Centralized_NC_sel(net, sim, runopts, crit):
         ## disp(['Selected node ' num2str(sel_u)]);
         print "Selected node no.",i,':',sel_u
         f = open('times.txt', 'a')
-        f.write(('{:g}'*net['receivers'].size+'\n').format(*(tuple(tc_all[sel_u,:]))))
+        f.write(('{:g}   '*net['receivers'].size+'\n').format(*(tuple(tc_all[sel_u,:]))))
         f.close()
     #end
     
