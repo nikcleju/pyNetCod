@@ -900,7 +900,7 @@ def run_example(folder, randstate, net, sim, runopts):
         #[R D] = breadthdist(net.capacities + net.capacities');
         R,D = graph.all_pairs_sp(net['capacities'] + net['capacities'].T)
         #runopts.rmax = max(max(D));
-        runopts.rmax = numpy.max(D)
+        runopts['rmax'] = numpy.max(D)
     #end
     
     #if runopts.do_dist_delay || runopts.do_dist_flow
