@@ -556,7 +556,7 @@ def create_config_dat(filepath, data, headers):
             #if i <= numel(data{k})
             if i < data[k].size: # Python strict equality now, because 0-based
                 #fprintf(fid, '#12d', data{k}(i)-1);
-                fid.write( '{:12d}'.format(data[k][i]))
+                fid.write( '{:12d}'.format(int(round(data[k][i]))))
             else:
                 #fprintf(fid, '        ');
                 fid.write( '        ')
