@@ -25,7 +25,7 @@ def create_local_network(net, centralnode, p0matrix, ecc):
     
     # Find the known subnetwork
     #subnet_nodes  = union ( find( D(:,centralnode) <= ecc ), find( D(centralnode,:) <= ecc ) );
-    subnet_nodes  = numpy.union1d ( numpy.nonzero( D[:,centralnode] <= ecc ), numpy.nonzero( D[centralnode,:] <= ecc ) )
+    subnet_nodes  = numpy.union1d ( numpy.nonzero( D[:,centralnode] <= ecc )[0], numpy.nonzero( D[centralnode,:] <= ecc )[0] )
     ##subnet_nodes  = union ( subnet_nodes, centralnode);
     
     # make subnet_nodes a row vector, if not already
@@ -36,15 +36,17 @@ def create_local_network(net, centralnode, p0matrix, ecc):
     
     # The known subnetwork matrix
     #subnet_caps        = net.capacities(subnet_nodes, subnet_nodes);
-    subnet_caps        = net['capacities'](subnet_nodes, subnet_nodes)
+    subnet_caps        = net['capacities'][numpy.ix_(subnet_nodes, subnet_nodes)]
     # The known subnetwork error matrix
     #subnet_errorrates  = net.errorrates(subnet_nodes, subnet_nodes);
-    subnet_errorrates  = net['errorrates'](subnet_nodes, subnet_nodes)
+    subnet_errorrates  = net['errorrates'][numpy.ix_(subnet_nodes, subnet_nodes)]
     # The top ancestors (sources) of the known subnet = the nodes which have no incoming links in the subnet
     #top_ancestors      = subnet_nodes(find(sum(subnet_caps, 1)==0))'; # nodes with input capacity == 0
     # The bottom descendants (clients) of the known subnet = the nodes which have no outgoing links in the subnet
     #bottom_descendants = subnet_nodes(find(sum(subnet_caps, 2)==0))'; # nodes with output capacity == 0
-    bottom_descendants = subnet_nodes(numpy.nonzero(numpy.sum(subnet_caps, 1)==0)) # nodes with output capacity == 0
+    #bottom_descendants = subnet_nodes[numpy.nonzero(numpy.sum(subnet_caps, 1)==0)] # nodes with output capacity == 0
+    # Simpler:
+    bottom_descendants = subnet_nodes[numpy.sum(subnet_caps, 1)==0] # nodes with output capacity == 0
     
     # Add the real receivers (the ones which are not already in the subnet)
     # Exclude receivers which happen to lie in the known neighborhood
@@ -73,7 +75,7 @@ def create_local_network(net, centralnode, p0matrix, ecc):
     
         # index of the bottom descendant node, relative to the subnetwork node numbers
         #descendantnumber = find(subnet_nodes == bottom_descendants(j));
-        descendantnumber = numpy.nonzero(subnet_nodes == bottom_descendants[j])
+        descendantnumber = numpy.nonzero(subnet_nodes == bottom_descendants[j])[0]
     
         # For each extra receiver we have to add
         #for i = 1:numtoadd
@@ -91,7 +93,9 @@ def create_local_network(net, centralnode, p0matrix, ecc):
             #  this single virtual link of capacity b_0 and loss probability p0
             #subnet_caps      (descendantnumber, recvnumber) = b_o(bottom_descendants(j));
             subnet_caps      [descendantnumber, recvnumber] = b_o[bottom_descendants[j]]
-            subnet_errorrates[descendantnumber, recvnumber] = p0matrix[bottom_descendants[j], numpy.nonzero(net['receivers'] == remaining_receivers[i])]
+            # Simpler:
+            #subnet_errorrates[descendantnumber, recvnumber] = p0matrix[bottom_descendants[j], numpy.nonzero(net['receivers'] == remaining_receivers[i])]
+            subnet_errorrates[descendantnumber, recvnumber] = p0matrix[bottom_descendants[j], net['receivers'] == remaining_receivers[i]]
         #end
         
         # add the descendant number to the list of bottom descendants relative numbers
@@ -108,7 +112,7 @@ def create_local_network(net, centralnode, p0matrix, ecc):
     #localnet.errorrates = subnet_errorrates;
     localnet['errorrates'] = subnet_errorrates.copy()
     #localnet.sources    = find(sum(subnet_caps .* (1-subnet_errorrates), 1)==0); # nodes with input capacity == 0, relative to the new node numbers
-    localnet['sources']    = numpy.nonzero(numpy.sum(subnet_caps * (1.-subnet_errorrates), 0)==0) # nodes with input capacity == 0, relative to the new node numbers
+    localnet['sources']    = numpy.nonzero(numpy.sum(subnet_caps * (1.-subnet_errorrates), 0)==0)[0] # nodes with input capacity == 0, relative to the new node numbers
     #localnet.receivers  = (localnet.nnodes - numel(net.receivers) + 1):localnet.nnodes;  # the last nodes
     localnet['receivers']  = numpy.arange((localnet['nnodes'] - net['receivers'].size), localnet['nnodes'])  # the last nodes
     #allnodes = 1:(localnet.nnodes - numel(localnet.receivers));     # excluding receivers
@@ -144,7 +148,7 @@ def create_local_network(net, centralnode, p0matrix, ecc):
             global2local[i] = 0 # Node i not in the local network
         else:
             #global2local(i) = find(alllocalnodes == i);
-            global2local[i] = numpy.nonzero(alllocalnodes == i)
+            global2local[i] = numpy.nonzero(alllocalnodes == i)[0]
         #end
     #end
     

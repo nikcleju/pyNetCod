@@ -26,6 +26,17 @@ def testLoadRun_globalflow():
                                                   'do_global_flow':1,
                                                   'do_dist_delay':0,
                                                   'do_dist_flow':0})
+                                                  
+def testLoadRun_distdelay():
+    examples.load_example_and_run('..\\ExNC\\2', {'do_global_delay':0,
+                                                  'do_global_flow':0,
+                                                  'do_dist_delay':1,
+                                                  'do_dist_flow':0})                                                  
+def testLoadRun_distflow():
+    examples.load_example_and_run('..\\ExNC\\2', {'do_global_delay':0,
+                                                  'do_global_flow':0,
+                                                  'do_dist_delay':0,
+                                                  'do_dist_flow':1})                                                  
 
 #class testComputings(unittest.TestCase):
 #    
@@ -34,4 +45,4 @@ def testLoadRun_globalflow():
 
 
 if __name__ == "__main__":
-    testLoadRun_globalflow()
+    testLoadRun_distdelay()

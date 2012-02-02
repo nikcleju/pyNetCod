@@ -468,7 +468,7 @@ def Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc):
             
             # Turn temporarily u into a NC node
             #ncnodes_temp = union(ncnodes, u);
-            ncnodes_temp = numpy.union1d(ncnodes, u)
+            ncnodes_temp = numpy.union1d(ncnodes, numpy.array([u]))
             
             # Estimate the average decoding delay at the clients tc (using
             # Algorithm 1)
@@ -481,11 +481,12 @@ def Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc):
             #prev_estim_g2l = prev_estim;
             prev_estim_g2l = prev_estim.copy()
             #prev_estim_g2l.ncnodes = g2l(prev_estim.ncnodes);
-            prev_estim_g2l['ncnodes'] = g2l[prev_estim['ncnodes']]
+            prev_estim_g2l['ncnodes'] = numpy.atleast_1d(g2l[numpy.int32(prev_estim['ncnodes'])])
             #ncnodes_temp_g2l = g2l(ncnodes_temp);
-            ncnodes_temp_g2l = g2l[ncnodes_temp]
+            ncnodes_temp_g2l = numpy.atleast_1d(g2l[numpy.int32(ncnodes_temp)])
             #ncnodes_temp_g2l(ncnodes_temp_g2l == 0) = []; # remove NC nodes which are not in local network
-            numpy.delete(ncnodes_temp_g2l(ncnodes_temp_g2l == 0)) # remove NC nodes which are not in local network
+            #numpy.delete(ncnodes_temp_g2l[ncnodes_temp_g2l == 0]) # remove NC nodes which are not in local network
+            numpy.delete(ncnodes_temp_g2l, ncnodes_temp_g2l == 0) # remove NC nodes which are not in local network
             # (ii) Run Algorithm 1 on local network
             #if (~runopts.do_old_icc_version)
             if not runopts['do_old_icc_version']:
@@ -502,7 +503,7 @@ def Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc):
             #fc_all(u,:) = sim.N ./ tc_all(u,:);
             fc_all[u,:] = sim['N'] / tc_all[u,:]
             #fc(u) = sum(fc_all(u,:), 2);
-            fc[u] = numpy.sum(fc_all[u,:], 1)
+            fc[u] = numpy.sum(fc_all[u,:])
         #end
         
         # Find node which minimizes total delay / maximizes total flow
@@ -530,7 +531,7 @@ def Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc):
         
         # Update replication rates using new delay estimates, to use for next NC node
         #R = update_R(R, net, p0matrix_origR, prev_estim.ncnodes, prev_estim.tc);    
-        R = update_R(R, net, p0matrix_origR, prev_estim['ncnodes'], prev_estim['tc']);    
+        R = updateR.update_R(R, net, p0matrix_origR, prev_estim['ncnodes'], prev_estim['tc']);    
             
         # Add node to NC list
         #ncnodes = [ncnodes sel_u];
