@@ -59,4 +59,4 @@ def profileLoadRun_globaldelay():
 
 
 if __name__ == "__main__":
-    testLoadRun_distdelay_r1()
+    testLoadRun_globaldelay()

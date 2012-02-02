@@ -86,6 +86,9 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             #exp_N1 = sum( t1(:, sim.N+1 )' .* (0:(size(t1,1)-1)) );
             exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
             
+            exp_N1_v2 = compute_exp_N1(sim['N'], p0, nu, maxlines)
+            assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-3)
+            
             # safety check: it might be possible to have exp_N1 = 32 - 1e-x
             #if ((32-1e-2) <= exp_N1) && (exp_N1 < 32)
             if ((globalvars.hbuf-1e-2) <= exp_N1) and (exp_N1 < globalvars.hbuf):
@@ -791,4 +794,263 @@ def compute_p0_matrix_single_r(net, ncnodes, R, r_index):
   #end
   
   return p0matrix
+  
+def compute_exp_N1(N, p0, R, totallines):
+
+    # sanity parameter check
+    #if R > 1000  # huge replication rate
+    if R > 1000:  # huge replication rate
+        #if p0^R < 1e-4
+        if p0**R < 1e-4:
+            # a packet from virtually any time interval will surely reach the
+            # client
+            #t = eye(N+1);
+            #t = numpy.eye(N+1)
+            #t1 = numpy.eye(N+1)
+            return N
+        else:
+            # too much memory needed to compute this
+            #t = zeros(N+1);  # will be detected later in compute_tc_u() and the time will be Inf
+            #t = numpy.zeros((N+1,N+1))  # will be detected later in compute_tc_u() and the time will be Inf
+            #if R > 20000:
+                # too much memory & time needed to compute this
+                #t1 = zeros(N+1);  # will be detected later in compute_tc_u() and the time will be Inf
+                #t1 = numpy.zeros((N+1,N+1))  # will be detected later in compute_tc_u() and the time will be Inf
+            return 0            
+            # TODO: sort this mess
+        #end
+        #return t
+    #end
+    
+    # P(0|0) = 1, i.e. before the NC received its first packet, the client's
+    # rank is surely 0
+    tline = numpy.zeros(N+1)
+    tline[0] = 1
+    
+    R_low = math.floor(R)
+    R_high = math.floor(R+1)
+    p_low  = math.floor(R+1) - R
+    p_high = R - math.floor(R)
+    
+    ## store binomial pdf values in a table, to avoid re-computing them many
+    ## times
+    ## 'low' is for floor(R), 'high' is for ceil(R)
+    bino_table_zero_low    = scipy.stats.distributions.binom.pmf(numpy.arange(0,(R_low+1)), R_low, 1.-p0)
+    bino_table_zero_high   = scipy.stats.distributions.binom.pmf(numpy.arange(0,(R_high+1)), R_high, 1.-p0)
+    
+    bino_table_zero_low_convmtx  = convmtx(bino_table_zero_low,  N + 1)
+    bino_table_zero_low_convmtx_summed  = bino_table_zero_low_convmtx
+    bino_table_zero_low_convmtx_summed[:,N] = numpy.sum(bino_table_zero_low_convmtx_summed[:,N:(N + bino_table_zero_low.size)], 1)
+    bino_table_zero_low_convmtx_summed = bino_table_zero_low_convmtx_summed[:,:(N+1)]
+
+    bino_table_zero_high_convmtx = convmtx(bino_table_zero_high, N + 1)
+    bino_table_zero_high_convmtx_summed  = bino_table_zero_high_convmtx;
+    bino_table_zero_high_convmtx_summed[:,N] = numpy.sum(bino_table_zero_high_convmtx_summed[:,N:(N + bino_table_zero_high.size)], 1)
+    bino_table_zero_high_convmtx_summed = bino_table_zero_high_convmtx_summed[:,:(N+1)]
+    
+    bino_table_zero_both_convmtx_summed_weightedsum = p_low * bino_table_zero_low_convmtx_summed + p_high * bino_table_zero_high_convmtx_summed
+    
+    #bino_table_zero_both_summed_weighted = p_low * numpy.hstack((bino_table_zero_low,numpy.array([0]))) + p_high * bino_table_zero_high
+    exp_N1 = 0
+    for i in range(totallines-1):
+        tline = numpy.dot(tline, bino_table_zero_both_convmtx_summed_weightedsum)
+        if i < N:
+            tline[i+1] = numpy.sum(tline[(i+1):])
+            tline[(i+2):] = 0
+        
+        if p0 > 1:
+            if abs(p0 - 1) < 1e-6:
+                p0 = 1
+    
+        t1line = numpy.zeros(N+1)
+        t1line[0] = 1
+    
+        k = numpy.arange(1,R_low+1)
+        # betainc(... 'upper') = 1 - betainc(...)
+        # Scipy betainc() takes p as the last argument!
+        betainc_table_low  = 1 - scipy.special.betainc(R_low-k+1, k, p0)
+        k = numpy.arange(1,R_high+1)
+        betainc_table_high = 1 - scipy.special.betainc(R_high-k+1, k, p0)
+    
+        cm_low  = convmtx(numpy.hstack((betainc_table_low,numpy.array([0]))), N)
+        cm_high = convmtx(betainc_table_high, N)
+        cm_all_w = p_low * cm_low + p_high * cm_high
+        
+        #    # ge lower diagonal part of t, without the last column
+        #    #tl = tril(t(:,1:N), 0);
+        #    tl = numpy.tril(t[:,:N], 0)
+        #
+        #    # convolve t1 with betainc_table_low by multipliying with conv matrix
+        #    res_low = numpy.dot(tl , cm_low)
+        #    res_low = numpy.hstack((numpy.zeros((totallines,1)), res_low[:,:N]))
+        #
+        #    # convolve t1 with betainc_table_high by multipliying with conv matrix
+        #    res_high = numpy.dot(tl , cm_high)
+        #    res_high = numpy.hstack((numpy.zeros((totallines,1)), res_high[:,:N]))
+        #
+        #    # add
+        #    res = p_low * res_low + p_high * res_high
+    
+        t1line = numpy.dot(tline[:N] , cm_all_w)
+        
+        ## add one row on top, remove last row
+        ##res = [1 zeros(1,N); res(1:totallines-1,:)];
+        #res = numpy.vstack((numpy.hstack((1, numpy.zeros(N))) , res[:totallines-1,:]))
+    
+        ## remove excess values from convolution
+        ##res = tril(res);
+        #res = numpy.tril(res)
+        
+        #exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
+        if i+2 >= N:
+          exp_N1 += (i+2) * t1line[N-1]
+        
+        # BUG: Because Matlab is 1-based, while it checks at lines 20, 40 etc,
+        #  this actually means in Python 19, 39, etc. So check (i+2)%20 instead
+        #if (i+1)%20 == 0: # check every 20 lines
+        if (i+2)%20 == 0: # check every 20 lines
+            if tline[N] > (1-1e-3):
+                break      
+            
+    return exp_N1
+        
       
+def compute_exp_N1_C(N, p0, R, totallines):
+    """
+    Implement compute_pcond_table(), compute_pcond_firsttime_table() and the
+    calculation formula of exp_N1 as a single C function
+    """
+
+    # sanity parameter check
+    #if R > 1000  # huge replication rate
+    if R > 1000:  # huge replication rate
+        #if p0^R < 1e-4
+        if p0**R < 1e-4:
+            # a packet from virtually any time interval will surely reach the
+            # client
+            #t = eye(N+1);
+            t = numpy.eye(N+1)
+        else:
+            # too much memory needed to compute this
+            #t = zeros(N+1);  # will be detected later in compute_tc_u() and the time will be Inf
+            t = numpy.zeros((N+1,N+1))  # will be detected later in compute_tc_u() and the time will be Inf
+        #end
+        return t
+    #end
+    
+    #R_low = floor(R);
+    #R_high = floor(R+1);
+    #p_low  = floor(R+1) - R;
+    #p_high = R - floor(R);
+    R_low = math.floor(R)
+    R_high = math.floor(R+1)
+    p_low  = math.floor(R+1) - R
+    p_high = R - math.floor(R)
+    
+    ## store binomial pdf values in a table, to avoid re-computing them many
+    ## times
+    ## 'low' is for floor(R), 'high' is for ceil(R)
+    ##bino_table_low    = binopdf(1:R_low, R_low, 1-p0);
+    ##bino_table_high   = binopdf(1:R_high, R_high, 1-p0);
+    #bino_table_zero_low    = binopdf(0:R_low, R_low, 1-p0);
+    #bino_table_zero_high   = binopdf(0:R_high, R_high, 1-p0);    
+    bino_table_zero_low    = scipy.stats.distributions.binom.pmf(numpy.arange(0,(R_low+1)), R_low, 1.-p0)
+    bino_table_zero_high   = scipy.stats.distributions.binom.pmf(numpy.arange(0,(R_high+1)), R_high, 1.-p0)
+    
+    #bino_table_zero_low_convmtx  = convmtx(bino_table_zero_low,  N + 1);
+    #bino_table_zero_low_convmtx_summed  = bino_table_zero_low_convmtx;
+    #bino_table_zero_low_convmtx_summed(:,N+1) = sum(bino_table_zero_low_convmtx_summed(:,(N+1):(N + numel(bino_table_zero_low))), 2);
+    #bino_table_zero_low_convmtx_summed = bino_table_zero_low_convmtx_summed(:,1:(N+1));
+    bino_table_zero_low_convmtx  = convmtx(bino_table_zero_low,  N + 1)
+    bino_table_zero_low_convmtx_summed  = bino_table_zero_low_convmtx
+    bino_table_zero_low_convmtx_summed[:,N] = numpy.sum(bino_table_zero_low_convmtx_summed[:,N:(N + bino_table_zero_low.size)], 1)
+    bino_table_zero_low_convmtx_summed = bino_table_zero_low_convmtx_summed[:,:(N+1)]
+
+    #bino_table_zero_high_convmtx = convmtx(bino_table_zero_high, N + 1);
+    #bino_table_zero_high_convmtx_summed  = bino_table_zero_high_convmtx;
+    #bino_table_zero_high_convmtx_summed(:,N+1) = sum(bino_table_zero_high_convmtx_summed(:,(N+1):(N + numel(bino_table_zero_high))), 2);
+    #bino_table_zero_high_convmtx_summed = bino_table_zero_high_convmtx_summed(:,1:(N+1));
+    bino_table_zero_high_convmtx = convmtx(bino_table_zero_high, N + 1)
+    bino_table_zero_high_convmtx_summed  = bino_table_zero_high_convmtx;
+    bino_table_zero_high_convmtx_summed[:,N] = numpy.sum(bino_table_zero_high_convmtx_summed[:,N:(N + bino_table_zero_high.size)], 1)
+    bino_table_zero_high_convmtx_summed = bino_table_zero_high_convmtx_summed[:,:(N+1)]
+    
+    #bino_table_zero_both_convmtx_summed_weightedsum = p_low * bino_table_zero_low_convmtx_summed + p_high * bino_table_zero_high_convmtx_summed;
+    bino_table_zero_both_convmtx_summed_weightedsum = p_low * bino_table_zero_low_convmtx_summed + p_high * bino_table_zero_high_convmtx_summed
+
+    
+    ##t = zeros(totallines, N+1);
+    #t = numpy.zeros((totallines, N+1))
+    ## P(0|0) = 1, i.e. before the NC received its first packet, the client's
+    ## rank is surely 0
+    ##t(1,1) = 1;
+    #t[0,0] = 1
+    
+    tline = numpy.zeros(N+1)
+    tlinenew = numpy.zeros(N+1)
+
+    llow = bino_table_zero_low.size
+
+    
+    code = r"""
+    for (int l = 0; l < N; l++) {
+
+      # ===========================     
+      # 1. compute pcond_table:
+      # ============================
+      #t2_1 = numpy.convolve(t[i,:], bino_table_zero_low)
+      #t2_1[i+1] = numpy.sum(t2_1[(i+1):])
+      #t2_1 = t2_1[:(i+2)]
+      #t2_1 = numpy.concatenate((t2_1, numpy.zeros(N - i - 1)))
+      
+      # For i=0
+      for (int j = 0; j < N; j++) {
+        if j < llow
+          tline[j] += tline[0]*(p_low*bino_table_zero_low[j] + p_high*bino_table_zero_high[j])
+        else
+          tline[j] = 0
+      }
+      if llow < N
+        tline[llow] += tline[0]*p_high*bino_table_zero_high[j])
+      # For i > 0
+      for (int i = 1; i < N; i++) {
+        for (int j = 0; j < llow; j++) {
+          if i+j < N
+            tline[i+j] += tline[i]*(p_low*bino_table_zero_low[j] + p_high*bino_table_zero_high[j])
+          else
+            tline[N] += tline[i]*(p_low*bino_table_zero_low[j] + p_high*bino_table_zero_high[j])
+        }
+        if i+llow < N
+          tline[i+llow] += tline[i]*p_high*bino_table_zero_high[j]
+        else
+          tline[N] += tline[i]*p_high*bino_table_zero_high[j]
+      }
+      
+      # ===========================     
+      # 2. compute pcond_table:
+      # ============================
+      
+      
+    }
+    
+    for (int l = N; l < totallines-1; l++) {:
+      #t[i+1,:] = numpy.dot(t[i,:] , bino_table_zero_both_convmtx_summed_weightedsum)
+      # For i=0
+      for (int j = 0; j < N; j++) {
+        if j < lweighted
+          tline[j] += tline[0]*bino_table_zero_both_convmtx_summed_weightedsum[j]
+        else
+          tline[j] = 0
+      }
+      # For i > 0
+      for (int i = 1; i < N; i++) {
+        for (int j = 0; j < lweighted; j++) {
+          if i+j < N
+            tline[i+j] += tline[i]*bino_table_zero_both_convmtx_summed_weightedsum[j]
+          else
+            tline[N] += tline[i]*bino_table_zero_both_convmtx_summed_weightedsum[j]
+        }
+      }
+
+    }
+    """    
