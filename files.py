@@ -685,7 +685,7 @@ def output_scenario_folder(dirname, net, sim, runopts, winners):
         #for r_idx = 1:numel(winners.r)
         for r_idx in xrange(winners['r'].size):
             #dist_table_header{1 + r_idx} = num2str(winners.r(r_idx));
-            dist_table_header[1 + r_idx] = str(winners['r'][r_idx])
+            dist_table_header[1 + r_idx] = str(int(round(winners['r'][r_idx])))
             #dist_delay_table{1 + r_idx} = winners.dist_delay{winners.r(r_idx)};
             dist_delay_table[1 + r_idx] = winners['dist_delay'][winners['r'][r_idx]]
         #end
@@ -702,7 +702,7 @@ def output_scenario_folder(dirname, net, sim, runopts, winners):
         #for r_idx = 1:numel(winners.r)
         for r_idx in xrange(winners['r'].size):
             #dist_table_header{1 + r_idx} = num2str(winners.r(r_idx));
-            dist_table_header[1 + r_idx] = str(winners['r'][r_idx])
+            dist_table_header[1 + r_idx] = str(int(round(winners['r'][r_idx])))
             #dist_flow_table{1 + r_idx} = winners.dist_flow{winners.r(r_idx)};
             dist_flow_table[1 + r_idx] = winners['dist_flow'][winners['r'][r_idx]]
         #end
