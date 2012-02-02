@@ -53,4 +53,4 @@ def testLoadRun_distdelay_r1():
 
 
 if __name__ == "__main__":
-    testLoadRun_distdelay()
+    testLoadRun_distdelay_r1()

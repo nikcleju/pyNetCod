@@ -534,7 +534,7 @@ def create_config_dat(filepath, data, headers):
     #for k = 1:length(headers)
     for k in xrange(len(headers)):
         #strheaders = [strheaders '#12s'];
-        strheaders = strheaders + '{:12s}'
+        strheaders = strheaders + '{:>12s}'
         #strheadersarg = [strheadersarg ', headers{' int2str(k) '}'];
         strheadersarg = strheadersarg + 'headers[' + str(k) + '],'
     #end
@@ -556,7 +556,7 @@ def create_config_dat(filepath, data, headers):
             #if i <= numel(data{k})
             if i < data[k].size: # Python strict equality now, because 0-based
                 #fprintf(fid, '#12d', data{k}(i)-1);
-                fid.write( '{:12d}'.format(int(round(data[k][i]))))
+                fid.write( '{:>12d}'.format(int(round(data[k][i]))))
             else:
                 #fprintf(fid, '        ');
                 fid.write( '        ')
@@ -657,54 +657,58 @@ def output_scenario_folder(dirname, net, sim, runopts, winners):
     # Distributed, delay
     #disp('Writing distributed delay config files ...');
     #for r_idx = 1:numel(winners.r)
-    for r_idx in xrange(winners['r'].size):
-        #r = winners.r(r_idx);
-        r = winners['r'][r_idx]
-        #write_config_files([dirname '/config/'], 'config',winners.dist_delay{r}, net, sim);
-        write_config_files(dirname+'/config/', 'config', winners['dist_delay'][r], net, sim)
-    #end
+    if runopts['do_dist_delay']:
+        for r_idx in xrange(winners['r'].size):
+            #r = winners.r(r_idx);
+            r = winners['r'][r_idx]
+            #write_config_files([dirname '/config/'], 'config',winners.dist_delay{r}, net, sim);
+            write_config_files(dirname+'/config/', 'config', winners['dist_delay'][r], net, sim)
+        #end
     
     # Distributed, flow
     #disp('Writing distributed flow config files ...');
     #for r_idx = 1:numel(winners.r)
-    for r_idx in xrange(winners['r'].size):
-        #r = winners.r(r_idx);
-        r = winners['r'][r_idx]
-        #write_config_files([dirname '/config/'], 'config',winners.dist_flow{r}, net, sim);
-        write_config_files(dirname+'/config/', 'config', winners['dist_flow'][r], net, sim)
-    #end
+    if runopts['do_dist_flow']:
+        for r_idx in xrange(winners['r'].size):
+            #r = winners.r(r_idx);
+            r = winners['r'][r_idx]
+            #write_config_files([dirname '/config/'], 'config',winners.dist_flow{r}, net, sim);
+            write_config_files(dirname+'/config/', 'config', winners['dist_flow'][r], net, sim)
+        #end
     
-    # Create dist delay config.dat file
-    #dist_delay_table{1} = net.helpers;
-    dist_delay_table = {0:net['helpers']}
-    #dist_table_header{1} = 'HELPERS';
-    dist_table_header = {0:'HELPERS'}
-    #for r_idx = 1:numel(winners.r)
-    for r_idx in xrange(winners['r'].size):
-        #dist_table_header{1 + r_idx} = num2str(winners.r(r_idx));
-        dist_table_header[1 + r_idx] = str(winners['r'][r_idx])
-        #dist_delay_table{1 + r_idx} = winners.dist_delay{winners.r(r_idx)};
-        dist_delay_table[1 + r_idx] = winners['dist_delay'][winners['r'][r_idx]]
-    #end
-    #disp('Writing config_dist_delay.dat ...');
-    #create_config_dat([dirname '/config_dist_delay.dat'], dist_delay_table, dist_table_header);
-    create_config_dat(dirname +'/config_dist_delay.dat', dist_delay_table, dist_table_header)
+    if runopts['do_dist_delay']:    
+        # Create dist delay config.dat file
+        #dist_delay_table{1} = net.helpers;
+        dist_delay_table = {0:net['helpers']}
+        #dist_table_header{1} = 'HELPERS';
+        dist_table_header = {0:'HELPERS'}
+        #for r_idx = 1:numel(winners.r)
+        for r_idx in xrange(winners['r'].size):
+            #dist_table_header{1 + r_idx} = num2str(winners.r(r_idx));
+            dist_table_header[1 + r_idx] = str(winners['r'][r_idx])
+            #dist_delay_table{1 + r_idx} = winners.dist_delay{winners.r(r_idx)};
+            dist_delay_table[1 + r_idx] = winners['dist_delay'][winners['r'][r_idx]]
+        #end
+        #disp('Writing config_dist_delay.dat ...');
+        #create_config_dat([dirname '/config_dist_delay.dat'], dist_delay_table, dist_table_header);
+        create_config_dat(dirname +'/config_dist_delay.dat', dist_delay_table, dist_table_header)
     
-    # Create dist flow config.dat file
-    #dist_flow_table{1} = net.helpers;
-    dist_flow_table = {0: net['helpers']}
-    #dist_table_header{1} = 'HELPERS';
-    dist_table_header = {0: 'HELPERS'}
-    #for r_idx = 1:numel(winners.r)
-    for r_idx in xrange(winners['r'].size):
-        #dist_table_header{1 + r_idx} = num2str(winners.r(r_idx));
-        dist_table_header[1 + r_idx] = str(winners['r'][r_idx])
-        #dist_flow_table{1 + r_idx} = winners.dist_flow{winners.r(r_idx)};
-        dist_flow_table[1 + r_idx] = winners['dist_flow'][winners['r'][r_idx]]
-    #end
-    #disp('Writing config_dist_flow.dat ...');
-    #create_config_dat([dirname '/config_dist_flow.dat'], dist_flow_table, dist_table_header);
-    create_config_dat(dirname +'/config_dist_flow.dat', dist_flow_table, dist_table_header)
+    if runopts['do_dist_flow']:
+        # Create dist flow config.dat file
+        #dist_flow_table{1} = net.helpers;
+        dist_flow_table = {0: net['helpers']}
+        #dist_table_header{1} = 'HELPERS';
+        dist_table_header = {0: 'HELPERS'}
+        #for r_idx = 1:numel(winners.r)
+        for r_idx in xrange(winners['r'].size):
+            #dist_table_header{1 + r_idx} = num2str(winners.r(r_idx));
+            dist_table_header[1 + r_idx] = str(winners['r'][r_idx])
+            #dist_flow_table{1 + r_idx} = winners.dist_flow{winners.r(r_idx)};
+            dist_flow_table[1 + r_idx] = winners['dist_flow'][winners['r'][r_idx]]
+        #end
+        #disp('Writing config_dist_flow.dat ...');
+        #create_config_dat([dirname '/config_dist_flow.dat'], dist_flow_table, dist_table_header);
+        create_config_dat(dirname +'/config_dist_flow.dat', dist_flow_table, dist_table_header)
     
     #disp(['Written output files to ' dirname]);
     print('Written output files to '+ dirname)
