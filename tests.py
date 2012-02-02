@@ -38,6 +38,14 @@ def testLoadRun_distflow():
                                                   'do_dist_delay':0,
                                                   'do_dist_flow':1})                                                  
 
+def testLoadRun_distdelay_r1():
+    examples.load_example_and_run('..\\ExNC\\2', {'do_global_delay':0,
+                                                  'do_global_flow':0,
+                                                  'do_dist_delay':1,
+                                                  'do_dist_flow':0,
+                                                  'rmin':1,
+                                                  'rmax':1})                                                  
+
 #class testComputings(unittest.TestCase):
 #    
 #def setUp(self):
