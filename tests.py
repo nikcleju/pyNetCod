@@ -46,6 +46,12 @@ def testLoadRun_distdelay_r1():
                                                   'rmin':1,
                                                   'rmax':1})                                                  
 
+def profileLoadRun_globaldelay():
+    
+    import cProfile
+    cProfile.run('import tests; tests.testLoadRun_globaldelay()', 'profile_testLoadRun_globaldelay')
+
+
 #class testComputings(unittest.TestCase):
 #    
 #def setUp(self):

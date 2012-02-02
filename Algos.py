@@ -384,9 +384,9 @@ def Algo2_Centralized_NC_sel(net, sim, runopts, crit):
         ncnodes = numpy.hstack((ncnodes, sel_u))
         ## disp(['Selected node ' num2str(sel_u)]);
         print "Selected node no.",i,':',sel_u
-        f = open('times.txt', 'a')
-        f.write(('{:g}   '*net['receivers'].size+'\n').format(*(tuple(tc_all[sel_u,:]))))
-        f.close()
+        #f = open('times.txt', 'a')
+        #f.write(('{:g}   '*net['receivers'].size+'\n').format(*(tuple(tc_all[sel_u,:]))))
+        #f.close()
     #end
     
     #disp([datestr(now) ': Selected nodes = ' num2str(ncnodes)]);
@@ -537,6 +537,7 @@ def Algo3_Semidistributed_NC_sel(net, sim, runopts, crit, ecc):
         #ncnodes = [ncnodes sel_u];
         ncnodes = numpy.hstack((ncnodes, sel_u))
         #disp(['Selected node ' num2str(sel_u)]);
+        print "Selected node no.",i,':',sel_u
     #end
     
     #disp([datestr(now) ': Selected nodes = ' num2str(ncnodes)]);
