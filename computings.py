@@ -86,8 +86,8 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             #exp_N1 = sum( t1(:, sim.N+1 )' .* (0:(size(t1,1)-1)) );
             exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
             
-            exp_N1_v2 = compute_exp_N1(sim['N'], p0, nu, maxlines)
-            assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-3)
+            exp_N1_v2, debugargs = compute_exp_N1(sim['N'], p0, nu, maxlines)
+            assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-10)
             
             # safety check: it might be possible to have exp_N1 = 32 - 1e-x
             #if ((32-1e-2) <= exp_N1) && (exp_N1 < 32)
@@ -824,8 +824,8 @@ def compute_exp_N1(N, p0, R, totallines):
     
     # P(0|0) = 1, i.e. before the NC received its first packet, the client's
     # rank is surely 0
-    tline = numpy.zeros(N+1)
-    tline[0] = 1
+    t_line = numpy.zeros(N+1)
+    t_line[0] = 1
     
     R_low = math.floor(R)
     R_high = math.floor(R+1)
@@ -851,12 +851,14 @@ def compute_exp_N1(N, p0, R, totallines):
     bino_table_zero_both_convmtx_summed_weightedsum = p_low * bino_table_zero_low_convmtx_summed + p_high * bino_table_zero_high_convmtx_summed
     
     #bino_table_zero_both_summed_weighted = p_low * numpy.hstack((bino_table_zero_low,numpy.array([0]))) + p_high * bino_table_zero_high
-    exp_N1 = 0
-    for i in range(totallines-1):
-        tline = numpy.dot(tline, bino_table_zero_both_convmtx_summed_weightedsum)
+    exp_N1 = 0.0
+    # DEBUG:
+    debugargs = numpy.zeros((totallines+2,3))
+    for i in range(totallines-2):
+        t_line = numpy.dot(t_line, bino_table_zero_both_convmtx_summed_weightedsum)
         if i < N:
-            tline[i+1] = numpy.sum(tline[(i+1):])
-            tline[(i+2):] = 0
+            t_line[i+1] = numpy.sum(t_line[(i+1):])
+            t_line[(i+2):] = 0
         
         if p0 > 1:
             if abs(p0 - 1) < 1e-6:
@@ -891,7 +893,7 @@ def compute_exp_N1(N, p0, R, totallines):
         #    # add
         #    res = p_low * res_low + p_high * res_high
     
-        t1line = numpy.dot(tline[:N] , cm_all_w)
+        tfirst_line = numpy.dot(t_line[:N] , cm_all_w)
         
         ## add one row on top, remove last row
         ##res = [1 zeros(1,N); res(1:totallines-1,:)];
@@ -900,19 +902,27 @@ def compute_exp_N1(N, p0, R, totallines):
         ## remove excess values from convolution
         ##res = tril(res);
         #res = numpy.tril(res)
-        
-        #exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
-        if i+2 >= N:
-          exp_N1 += (i+2) * t1line[N-1]
-        
+
         # BUG: Because Matlab is 1-based, while it checks at lines 20, 40 etc,
         #  this actually means in Python 19, 39, etc. So check (i+2)%20 instead
         #if (i+1)%20 == 0: # check every 20 lines
         if (i+2)%20 == 0: # check every 20 lines
-            if tline[N] > (1-1e-3):
+            if t_line[N] > (1-1e-3):
                 break      
-            
-    return exp_N1
+
+        #exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
+        # BUG: move this after test, because in the original function we added a
+        #  line on top of the table
+        #  e.g. if t had 40 lines, 
+        if i+2 >= N:
+          exp_N1 += (i+2) * tfirst_line[N-1]
+          debugargs[i+2,0] = i+2
+          debugargs[i+2,1] = tfirst_line[N-1]
+          debugargs[i+2,2] = t_line[N]
+
+
+    debugargs = debugargs[:i+3,:]
+    return exp_N1, debugargs
         
       
 def compute_exp_N1_C(N, p0, R, totallines):
