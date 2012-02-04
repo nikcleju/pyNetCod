@@ -76,18 +76,20 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             
             # Eq (10) and (11): Compute Pc(n,r) for node u
             #t = compute_pcond_table(sim.N, p0, nu, maxlines);
-            t = compute_pcond_table(sim['N'], p0, nu, maxlines)
+            #t = compute_pcond_table(sim['N'], p0, nu, maxlines)
             
             # Eq (12): Compute mathcalPc(n,r) for node u
             #t1 = compute_pcond_firsttime_table(t, sim.N, p0, nu);
-            t1 = compute_pcond_firsttime_table(t, sim['N'], p0, nu)
+            #t1 = compute_pcond_firsttime_table(t, sim['N'], p0, nu)
             
             # Eq(13): Expected value
             #exp_N1 = sum( t1(:, sim.N+1 )' .* (0:(size(t1,1)-1)) );
-            exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
+            #exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
             
-            exp_N1_v2, debugargs = compute_exp_N1(sim['N'], p0, nu, maxlines)
-            assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-10)
+            #exp_N1_v2, debugargs = compute_exp_N1(sim['N'], p0, nu, maxlines)
+            #assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-10)
+            
+            exp_N1 = compute_exp_N1(sim['N'], p0, nu, maxlines)            
             
             # safety check: it might be possible to have exp_N1 = 32 - 1e-x
             #if ((32-1e-2) <= exp_N1) && (exp_N1 < 32)
@@ -97,7 +99,8 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             #end
             # safety check
             #if exp_N1 < sim.N  || t(end) < (1 - 1e-2)
-            if exp_N1 < sim['N'] or t[-1,-1] < (1. - 1e-2):
+            #if exp_N1 < sim['N'] or t[-1,-1] < (1. - 1e-2):
+            if exp_N1 < sim['N']:
                 #exp_N1 = Inf;   # totallines not enough, t1 not complete
                 exp_N1 = numpy.Inf;   # totallines not enough, t1 not complete
             #end
@@ -534,6 +537,7 @@ def convmtx(h,N):
     return scipy.linalg.toeplitz(numpy.hstack((h[0],numpy.zeros(N-1))), numpy.hstack((h, numpy.zeros(N-1))))
     
     
+    
 
 def compute_p0_matrix(net, ncnodes, R):
   N = net['capacities'].shape[0]
@@ -832,6 +836,10 @@ def compute_exp_N1(N, p0, R, totallines):
     p_low  = math.floor(R+1) - R
     p_high = R - math.floor(R)
     
+    ##############
+    # pcond stuff    
+    ##############
+    
     ## store binomial pdf values in a table, to avoid re-computing them many
     ## times
     ## 'low' is for floor(R), 'high' is for ceil(R)
@@ -850,10 +858,28 @@ def compute_exp_N1(N, p0, R, totallines):
     
     bino_table_zero_both_convmtx_summed_weightedsum = p_low * bino_table_zero_low_convmtx_summed + p_high * bino_table_zero_high_convmtx_summed
     
+    ##############
+    # pcond_first stuff    
+    ##############
+    
+    k = numpy.arange(1,R_low+1)
+    # betainc(... 'upper') = 1 - betainc(...)
+    # Scipy betainc() takes p as the last argument!
+    betainc_table_low  = 1 - scipy.special.betainc(R_low-k+1, k, p0)
+    k = numpy.arange(1,R_high+1)
+    betainc_table_high = 1 - scipy.special.betainc(R_high-k+1, k, p0)
+
+    cm_low  = convmtx(numpy.hstack((betainc_table_low,numpy.array([0]))), N)
+    cm_high = convmtx(betainc_table_high, N)
+    cm_all_w = p_low * cm_low + p_high * cm_high    
+    
+    ##############
+    
     #bino_table_zero_both_summed_weighted = p_low * numpy.hstack((bino_table_zero_low,numpy.array([0]))) + p_high * bino_table_zero_high
     exp_N1 = 0.0
     # DEBUG:
-    debugargs = numpy.zeros((totallines+2,3))
+    #debugargs = numpy.zeros((totallines+2,3))
+    
     for i in range(totallines-2):
         t_line = numpy.dot(t_line, bino_table_zero_both_convmtx_summed_weightedsum)
         if i < N:
@@ -867,17 +893,6 @@ def compute_exp_N1(N, p0, R, totallines):
         t1line = numpy.zeros(N+1)
         t1line[0] = 1
     
-        k = numpy.arange(1,R_low+1)
-        # betainc(... 'upper') = 1 - betainc(...)
-        # Scipy betainc() takes p as the last argument!
-        betainc_table_low  = 1 - scipy.special.betainc(R_low-k+1, k, p0)
-        k = numpy.arange(1,R_high+1)
-        betainc_table_high = 1 - scipy.special.betainc(R_high-k+1, k, p0)
-    
-        cm_low  = convmtx(numpy.hstack((betainc_table_low,numpy.array([0]))), N)
-        cm_high = convmtx(betainc_table_high, N)
-        cm_all_w = p_low * cm_low + p_high * cm_high
-        
         #    # ge lower diagonal part of t, without the last column
         #    #tl = tril(t(:,1:N), 0);
         #    tl = numpy.tril(t[:,:N], 0)
@@ -916,13 +931,17 @@ def compute_exp_N1(N, p0, R, totallines):
         #  e.g. if t had 40 lines, 
         if i+2 >= N:
           exp_N1 += (i+2) * tfirst_line[N-1]
-          debugargs[i+2,0] = i+2
-          debugargs[i+2,1] = tfirst_line[N-1]
-          debugargs[i+2,2] = t_line[N]
+          #debugargs[i+2,0] = i+2
+          #debugargs[i+2,1] = tfirst_line[N-1]
+          #debugargs[i+2,2] = t_line[N]
 
+    # Implement t[-1,-1] < (1. - 1e-2) in compute_tc_u()
+    if t_line[-1] < (1. - 1e-2):
+        exp_N1 == 0.0 # this will force tc = Inf in compute_tc_u()
 
-    debugargs = debugargs[:i+3,:]
-    return exp_N1, debugargs
+    #debugargs = debugargs[:i+3,:]
+    #return exp_N1, debugargs
+    return exp_N1
         
       
 def compute_exp_N1_C(N, p0, R, totallines):
