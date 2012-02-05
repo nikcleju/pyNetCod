@@ -88,7 +88,7 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             
             #exp_N1_v2, debugargs = compute_exp_N1(sim['N'], p0, nu, maxlines)
             exp_N1_v2 = compute_exp_N1(sim['N'], p0, nu, maxlines)
-            assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-10)
+            #assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-10)
             
             #exp_N1 = compute_exp_N1(sim['N'], p0, nu, maxlines)            
             
@@ -118,6 +118,11 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             tcu_v2 = exp_N1_v2 / N1
             if tcu != numpy.Inf and tcu_v2 != numpy.Inf :
                 assert(abs(tcu - tcu_v2) / tcu < 1e-10)
+            if tcu ==numpy.Inf and tcu_v2 != numpy.Inf:
+                assert(False)
+            if tcu !=numpy.Inf and tcu_v2 == numpy.Inf:
+                assert(False)
+                
     
         else:
             # Node over-provisioned in bandwidth
@@ -956,7 +961,7 @@ def compute_exp_N1(N, p0, R, totallines):
 
     # Implement t[-1,-1] < (1. - 1e-2) in compute_tc_u()
     if t_line[-1] < (1. - 1e-2):
-        exp_N1 == 0.0 # this will force tc = Inf in compute_tc_u()
+        exp_N1 = 0.0 # this will force tc = Inf in compute_tc_u()
 
     #debugargs = debugargs[:i+3,:]
     #return exp_N1, debugargs
