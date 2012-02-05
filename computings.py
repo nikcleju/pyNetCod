@@ -76,20 +76,21 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             
             # Eq (10) and (11): Compute Pc(n,r) for node u
             #t = compute_pcond_table(sim.N, p0, nu, maxlines);
-            #t = compute_pcond_table(sim['N'], p0, nu, maxlines)
+            t = compute_pcond_table(sim['N'], p0, nu, maxlines)
             
             # Eq (12): Compute mathcalPc(n,r) for node u
             #t1 = compute_pcond_firsttime_table(t, sim.N, p0, nu);
-            #t1 = compute_pcond_firsttime_table(t, sim['N'], p0, nu)
+            t1 = compute_pcond_firsttime_table(t, sim['N'], p0, nu)
             
             # Eq(13): Expected value
             #exp_N1 = sum( t1(:, sim.N+1 )' .* (0:(size(t1,1)-1)) );
-            #exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
+            exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
             
             #exp_N1_v2, debugargs = compute_exp_N1(sim['N'], p0, nu, maxlines)
-            #assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-10)
+            exp_N1_v2 = compute_exp_N1(sim['N'], p0, nu, maxlines)
+            assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-10)
             
-            exp_N1 = compute_exp_N1(sim['N'], p0, nu, maxlines)            
+            #exp_N1 = compute_exp_N1(sim['N'], p0, nu, maxlines)            
             
             # safety check: it might be possible to have exp_N1 = 32 - 1e-x
             #if ((32-1e-2) <= exp_N1) && (exp_N1 < 32)
@@ -99,8 +100,8 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             #end
             # safety check
             #if exp_N1 < sim.N  || t(end) < (1 - 1e-2)
-            #if exp_N1 < sim['N'] or t[-1,-1] < (1. - 1e-2):
-            if exp_N1 < sim['N']:
+            if exp_N1 < sim['N'] or t[-1,-1] < (1. - 1e-2):
+            #if exp_N1 < sim['N']:
                 #exp_N1 = Inf;   # totallines not enough, t1 not complete
                 exp_N1 = numpy.Inf;   # totallines not enough, t1 not complete
             #end
@@ -108,6 +109,15 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             # Eq(14): Expected time
             #tcu = exp_N1 / N1;
             tcu = exp_N1 / N1
+
+            if exp_N1_v2 < sim['N']:
+            #if exp_N1 < sim['N']:
+                #exp_N1 = Inf;   # totallines not enough, t1 not complete
+                exp_N1_v2 = numpy.Inf;   # totallines not enough, t1 not complete
+            #end
+            tcu_v2 = exp_N1_v2 / N1
+            if tcu != numpy.Inf and tcu_v2 != numpy.Inf :
+                assert(abs(tcu - tcu_v2) / tcu < 1e-10)
     
         else:
             # Node over-provisioned in bandwidth
@@ -277,7 +287,16 @@ def compute_pcond_table(N, p0, R, totallines):
         #     #t2_1(N+1) = sum(t2_1((N+1):numel(t2_1)));
         #     #t2_1 = t2_1(1:(N+1));
         #     
-        #     #t2_2 = conv(t(i,:), bino_table_zero_high);
+        k = numpy.arange(1,R_low+1)
+        # betainc(... 'upper') = 1 - betainc(...)
+        # Scipy betainc() takes p as the last argument!
+        betainc_table_low  = 1 - scipy.special.betainc(R_low-k+1, k, p0)
+        k = numpy.arange(1,R_high+1)
+        betainc_table_high = 1 - scipy.special.betainc(R_high-k+1, k, p0)
+    
+        cm_low  = convmtx(numpy.hstack((betainc_table_low,numpy.array([0]))), N)
+        cm_high = convmtx(betainc_table_high, N)
+        cm_all_w = p_low * cm_low + p_high * cm_high #t2_2 = conv(t(i,:), bino_table_zero_high);
         #     t2_2 = t(i,:) * bino_table_zero_high_convmtx_summed;
         #     #t2_2(N+1) = sum(t2_2((N+1):numel(t2_2)));
         #     #t2_2 = t2_2(1:(N+1));
