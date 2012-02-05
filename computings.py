@@ -1,6 +1,10 @@
 import math
 import numpy
 import scipy.stats.distributions
+import scipy.weave
+
+import os
+os.environ['PATH'] = r'C:\MinGW\bin;' + os.environ['PATH']
 
 #import topsort
 import graph
@@ -74,6 +78,10 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             # Node with limited incoming bandwidth
             # Apply eqs (9) - (12)
             
+            #-------------------------------------------------
+            # First version, like Matlab original
+            # ------------------------------------------------
+            
             # Eq (10) and (11): Compute Pc(n,r) for node u
             #t = compute_pcond_table(sim.N, p0, nu, maxlines);
             t = compute_pcond_table(sim['N'], p0, nu, maxlines)
@@ -86,42 +94,99 @@ def compute_tc_u(net, sim, ncnode, N1, p0):
             #exp_N1 = sum( t1(:, sim.N+1 )' .* (0:(size(t1,1)-1)) );
             exp_N1 = numpy.sum( t1[:, sim['N']] * numpy.arange(t1.shape[0]) )
             
-            #exp_N1_v2, debugargs = compute_exp_N1(sim['N'], p0, nu, maxlines)
-            exp_N1_v2 = compute_exp_N1(sim['N'], p0, nu, maxlines)
-            #assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-10)
-            
-            #exp_N1 = compute_exp_N1(sim['N'], p0, nu, maxlines)            
-            
             # safety check: it might be possible to have exp_N1 = 32 - 1e-x
             #if ((32-1e-2) <= exp_N1) && (exp_N1 < 32)
             if ((globalvars.hbuf-1e-2) <= exp_N1) and (exp_N1 < globalvars.hbuf):
                 #exp_N1 = 32;
                 exp_N1 = globalvars.hbuf
             #end
+            
             # safety check
             #if exp_N1 < sim.N  || t(end) < (1 - 1e-2)
             if exp_N1 < sim['N'] or t[-1,-1] < (1. - 1e-2):
-            #if exp_N1 < sim['N']:
                 #exp_N1 = Inf;   # totallines not enough, t1 not complete
                 exp_N1 = numpy.Inf;   # totallines not enough, t1 not complete
             #end
+            
+            #-------------------------------------------------
+            # Second version, optimized
+            # Replaced with a single function compute_exp_N1(), no more tables
+            #-------------------------------------------------
+
+            #exp_N1_v2, debugargs = compute_exp_N1(sim['N'], p0, nu, maxlines)
+            exp_N1_v2 = compute_exp_N1(sim['N'], p0, nu, maxlines)
+
+            # safety check: it might be possible to have exp_N1 = 32 - 1e-x
+            #if ((32-1e-2) <= exp_N1) && (exp_N1 < 32)
+            if ((globalvars.hbuf-1e-2) <= exp_N1_v2) and (exp_N1_v2 < globalvars.hbuf):
+                #exp_N1 = 32;
+                exp_N1_v2 = globalvars.hbuf
+            #end
+
+            # safety check
+            #if exp_N1 < sim.N  || t(end) < (1 - 1e-2)
+            #if exp_N1 < sim['N'] or t[-1,-1] < (1. - 1e-2):
+            if exp_N1_v2 < sim['N']:
+                #exp_N1 = Inf;   # totallines not enough, t1 not complete
+                exp_N1_v2 = numpy.Inf;   # totallines not enough, t1 not complete
+            #end
+
+            #-------------------------------------------------
+            # Third version, optimized
+            # Implemented single function compute_exp_N1() in C
+            #-------------------------------------------------
+
+            exp_N1_v3 = compute_exp_N1_C(sim['N'], p0, nu, maxlines)
+
+            # safety check: it might be possible to have exp_N1 = 32 - 1e-x
+            #if ((32-1e-2) <= exp_N1) && (exp_N1 < 32)
+            if ((globalvars.hbuf-1e-2) <= exp_N1_v3) and (exp_N1_v3 < globalvars.hbuf):
+                #exp_N1 = 32;
+                exp_N1_v3 = globalvars.hbuf
+            #end
+
+            # safety check
+            #if exp_N1 < sim.N  || t(end) < (1 - 1e-2)
+            #if exp_N1 < sim['N'] or t[-1,-1] < (1. - 1e-2):
+            if exp_N1_v3 < sim['N']:
+                #exp_N1 = Inf;   # totallines not enough, t1 not complete
+                exp_N1_v3 = numpy.Inf;   # totallines not enough, t1 not complete
+            #end
+
+            #-------------------------------------------------
+            # Checking
+            #-------------------------------------------------
+            if (exp_N1 == numpy.Inf and exp_N1_v2 != numpy.Inf) or \
+               (exp_N1 == numpy.Inf and exp_N1_v3 != numpy.Inf) or \
+               (exp_N1 != numpy.Inf and exp_N1_v2 == numpy.Inf) or \
+               (exp_N1 != numpy.Inf and exp_N1_v3 == numpy.Inf) or \
+               (exp_N1_v2 == numpy.Inf and exp_N1_v3 != numpy.Inf) or \
+               (exp_N1_v2 != numpy.Inf and exp_N1_v3 == numpy.Inf):
+                   assert(False)
+            elif exp_N1 == numpy.Inf and exp_N1_v2 == numpy.Inf and exp_N1_v3 == numpy.Inf:
+                assert(True)
+            else:
+                assert(abs(exp_N1 - exp_N1_v2) / exp_N1 < 1e-10)
+                assert(abs(exp_N1_v2 - exp_N1_v3) < 1e-15)
+
+            #-------------------------------------------------
+            
+            exp_N1 = exp_N1_v3
             
             # Eq(14): Expected time
             #tcu = exp_N1 / N1;
             tcu = exp_N1 / N1
 
-            if exp_N1_v2 < sim['N']:
-            #if exp_N1 < sim['N']:
-                #exp_N1 = Inf;   # totallines not enough, t1 not complete
-                exp_N1_v2 = numpy.Inf;   # totallines not enough, t1 not complete
-            #end
-            tcu_v2 = exp_N1_v2 / N1
-            if tcu != numpy.Inf and tcu_v2 != numpy.Inf :
-                assert(abs(tcu - tcu_v2) / tcu < 1e-10)
-            if tcu ==numpy.Inf and tcu_v2 != numpy.Inf:
-                assert(False)
-            if tcu !=numpy.Inf and tcu_v2 == numpy.Inf:
-                assert(False)
+            #if exp_N1_v2 < sim['N']:
+            #    exp_N1_v2 = numpy.Inf;   # totallines not enough, t1 not complete
+            
+            #tcu_v2 = exp_N1_v2 / N1
+            #if tcu != numpy.Inf and tcu_v2 != numpy.Inf :
+            #    assert(abs(tcu - tcu_v2) / tcu < 1e-10)
+            #if tcu ==numpy.Inf and tcu_v2 != numpy.Inf:
+            #    assert(False)
+            #if tcu !=numpy.Inf and tcu_v2 == numpy.Inf:
+            #    assert(False)
                 
     
         else:
@@ -914,8 +979,8 @@ def compute_exp_N1(N, p0, R, totallines):
             if abs(p0 - 1) < 1e-6:
                 p0 = 1
     
-        t1line = numpy.zeros(N+1)
-        t1line[0] = 1
+        #t1line = numpy.zeros(N+1)
+        #t1line[0] = 1
     
         #    # ge lower diagonal part of t, without the last column
         #    #tl = tril(t(:,1:N), 0);
@@ -974,6 +1039,8 @@ def compute_exp_N1_C(N, p0, R, totallines):
     calculation formula of exp_N1 as a single C function
     """
 
+    #print N, p0, R, totallines
+
     # sanity parameter check
     #if R > 1000  # huge replication rate
     if R > 1000:  # huge replication rate
@@ -982,128 +1049,231 @@ def compute_exp_N1_C(N, p0, R, totallines):
             # a packet from virtually any time interval will surely reach the
             # client
             #t = eye(N+1);
-            t = numpy.eye(N+1)
+            #t = numpy.eye(N+1)
+            #t1 = numpy.eye(N+1)
+            return N
         else:
             # too much memory needed to compute this
             #t = zeros(N+1);  # will be detected later in compute_tc_u() and the time will be Inf
-            t = numpy.zeros((N+1,N+1))  # will be detected later in compute_tc_u() and the time will be Inf
+            #t = numpy.zeros((N+1,N+1))  # will be detected later in compute_tc_u() and the time will be Inf
+            #if R > 20000:
+                # too much memory & time needed to compute this
+                #t1 = zeros(N+1);  # will be detected later in compute_tc_u() and the time will be Inf
+                #t1 = numpy.zeros((N+1,N+1))  # will be detected later in compute_tc_u() and the time will be Inf
+            return 0            
+            # TODO: sort this mess
         #end
-        return t
+        #return t
     #end
     
-    #R_low = floor(R);
-    #R_high = floor(R+1);
-    #p_low  = floor(R+1) - R;
-    #p_high = R - floor(R);
+    # P(0|0) = 1, i.e. before the NC received its first packet, the client's
+    # rank is surely 0
+    t_line = numpy.zeros(N+1)
+    t_line[0] = 1.
+    
     R_low = math.floor(R)
     R_high = math.floor(R+1)
     p_low  = math.floor(R+1) - R
     p_high = R - math.floor(R)
     
+    ##############
+    # pcond stuff    
+    ##############
+    
     ## store binomial pdf values in a table, to avoid re-computing them many
     ## times
     ## 'low' is for floor(R), 'high' is for ceil(R)
-    ##bino_table_low    = binopdf(1:R_low, R_low, 1-p0);
-    ##bino_table_high   = binopdf(1:R_high, R_high, 1-p0);
-    #bino_table_zero_low    = binopdf(0:R_low, R_low, 1-p0);
-    #bino_table_zero_high   = binopdf(0:R_high, R_high, 1-p0);    
     bino_table_zero_low    = scipy.stats.distributions.binom.pmf(numpy.arange(0,(R_low+1)), R_low, 1.-p0)
     bino_table_zero_high   = scipy.stats.distributions.binom.pmf(numpy.arange(0,(R_high+1)), R_high, 1.-p0)
     
-    #bino_table_zero_low_convmtx  = convmtx(bino_table_zero_low,  N + 1);
-    #bino_table_zero_low_convmtx_summed  = bino_table_zero_low_convmtx;
-    #bino_table_zero_low_convmtx_summed(:,N+1) = sum(bino_table_zero_low_convmtx_summed(:,(N+1):(N + numel(bino_table_zero_low))), 2);
-    #bino_table_zero_low_convmtx_summed = bino_table_zero_low_convmtx_summed(:,1:(N+1));
     bino_table_zero_low_convmtx  = convmtx(bino_table_zero_low,  N + 1)
     bino_table_zero_low_convmtx_summed  = bino_table_zero_low_convmtx
     bino_table_zero_low_convmtx_summed[:,N] = numpy.sum(bino_table_zero_low_convmtx_summed[:,N:(N + bino_table_zero_low.size)], 1)
     bino_table_zero_low_convmtx_summed = bino_table_zero_low_convmtx_summed[:,:(N+1)]
 
-    #bino_table_zero_high_convmtx = convmtx(bino_table_zero_high, N + 1);
-    #bino_table_zero_high_convmtx_summed  = bino_table_zero_high_convmtx;
-    #bino_table_zero_high_convmtx_summed(:,N+1) = sum(bino_table_zero_high_convmtx_summed(:,(N+1):(N + numel(bino_table_zero_high))), 2);
-    #bino_table_zero_high_convmtx_summed = bino_table_zero_high_convmtx_summed(:,1:(N+1));
     bino_table_zero_high_convmtx = convmtx(bino_table_zero_high, N + 1)
     bino_table_zero_high_convmtx_summed  = bino_table_zero_high_convmtx;
     bino_table_zero_high_convmtx_summed[:,N] = numpy.sum(bino_table_zero_high_convmtx_summed[:,N:(N + bino_table_zero_high.size)], 1)
     bino_table_zero_high_convmtx_summed = bino_table_zero_high_convmtx_summed[:,:(N+1)]
     
-    #bino_table_zero_both_convmtx_summed_weightedsum = p_low * bino_table_zero_low_convmtx_summed + p_high * bino_table_zero_high_convmtx_summed;
     bino_table_zero_both_convmtx_summed_weightedsum = p_low * bino_table_zero_low_convmtx_summed + p_high * bino_table_zero_high_convmtx_summed
-
     
-    ##t = zeros(totallines, N+1);
-    #t = numpy.zeros((totallines, N+1))
-    ## P(0|0) = 1, i.e. before the NC received its first packet, the client's
-    ## rank is surely 0
-    ##t(1,1) = 1;
-    #t[0,0] = 1
+    ##############
+    # pcond_first stuff    
+    ##############
     
-    tline = numpy.zeros(N+1)
-    tlinenew = numpy.zeros(N+1)
+    k = numpy.arange(1,R_low+1)
+    # betainc(... 'upper') = 1 - betainc(...)
+    # Scipy betainc() takes p as the last argument!
+    betainc_table_low  = 1 - scipy.special.betainc(R_low-k+1, k, p0)
+    k = numpy.arange(1,R_high+1)
+    betainc_table_high = 1 - scipy.special.betainc(R_high-k+1, k, p0)
 
-    llow = bino_table_zero_low.size
-
+    cm_low  = convmtx(numpy.hstack((betainc_table_low,numpy.array([0]))), N)
+    cm_high = convmtx(betainc_table_high, N)
+    cm_all_w = p_low * cm_low + p_high * cm_high    
     
+    ##############
+    
+    #bino_table_zero_both_summed_weighted = p_low * numpy.hstack((bino_table_zero_low,numpy.array([0]))) + p_high * bino_table_zero_high
+    exp_N1 = 0.0
+    # DEBUG:
+    #debugargs = numpy.zeros((totallines+2,3))
+    
+    # For C++
+    t_line_comp = numpy.zeros_like(t_line)
+    tfirst_line = numpy.zeros(N+1)
+    nrows1 = bino_table_zero_both_convmtx_summed_weightedsum.shape[0]
+    nrows2 = cm_all_w.shape[0]
+    #fp0 = 
+    
+    #    code = r"""
+    #    #for i in range(totallines-2):
+    #    for (int i = 0; i < totallines-2; i++)
+    #    {
+    #        #t_line = numpy.dot(t_line, bino_table_zero_both_convmtx_summed_weightedsum)
+    #        for (int c = 0; c < N+1; c++):
+    #            t_line_comp[c] = t_line[0] * bino_table_zero_both_convmtx_summed_weightedsum[0,c]
+    #        for (int r = 1; r < nrows1; r++):
+    #            for (int c = 0; c < N+1; c++):
+    #                t_line_comp[c] += t_line[r] * bino_table_zero_both_convmtx_summed_weightedsum[r,c]
+    #        // copy back:
+    #        for (int c = 0; c < N+1; c++):
+    #            t_line[c] = t_line_comp[c]
+    #        
+    #        #if i < N:
+    #        #    t_line[i+1] = numpy.sum(t_line[(i+1):])
+    #        #    t_line[(i+2):] = 0
+    #        if i < N
+    #            for (int c = i+2; c < N+1; c++)
+    #            {
+    #                t_line[i+1] += t_line[c];
+    #                t_line[c] = 0.0;
+    #            }
+    #        
+    #        #if p0 > 1:
+    #        #    if abs(p0 - 1) < 1e-6:
+    #        #        p0 = 1
+    #        if p0 > 1
+    #            if (p0-1) < 0.000001
+    #                p0 = 1.0;
+    #    
+    #        #t1line = numpy.zeros(N+1)
+    #        #t1line[0] = 1
+    #    
+    #        #tfirst_line = numpy.dot(t_line[:N] , cm_all_w)
+    #        for (int c = 0; c < N; c++):
+    #            tfirst_line_comp[c] = t_line[0] * cm_all_w[0,c]
+    #        for (int r = 1; r < nrows2; r++):
+    #            for (int c = 0; c < N; c++):
+    #                tfirst_line_comp[c] += t_line[r] * cm_all_w[r,c]
+    #        // copy back:
+    #        for (int c = 0; c < N; c++)
+    #            tfirst_line[c] = tfirst_line_comp[c]        
+    #        
+    #        #if (i+2)%20 == 0: # check every 20 lines
+    #        #    if t_line[N] > (1-1e-3):
+    #        #        break      
+    #        if (i+2)%20 == 0
+    #            if t_line[N] > (1-1e-3)
+    #                break;
+    #
+    #        #if i+2 >= N:
+    #        #  exp_N1 += (i+2) * tfirst_line[N-1]
+    #        #  #debugargs[i+2,0] = i+2
+    #        #  #debugargs[i+2,1] = tfirst_line[N-1]
+    #        #  #debugargs[i+2,2] = t_line[N]
+    #        if (i+2) >= N
+    #            exp_N1 += (i+2) * tfirst_line[N-1]
+    #    }
+    #    # Implement t[-1,-1] < (1. - 1e-2) in compute_tc_u()
+    #    #if t_line[-1] < (1. - 1e-2):
+    #    #    exp_N1 = 0.0 # this will force tc = Inf in compute_tc_u()
+    #    if t_line[N] < (1. - 1e-2)
+    #        exp_N1 = 0.;
+    #
+    #    #debugargs = debugargs[:i+3,:]
+    #    #return exp_N1, debugargs
+    #    
+    #    return_val = exp_N1
+    #    """
+
+   
     code = r"""
-    for (int l = 0; l < N; l++) {
-
-      # ===========================     
-      # 1. compute pcond_table:
-      # ============================
-      #t2_1 = numpy.convolve(t[i,:], bino_table_zero_low)
-      #t2_1[i+1] = numpy.sum(t2_1[(i+1):])
-      #t2_1 = t2_1[:(i+2)]
-      #t2_1 = numpy.concatenate((t2_1, numpy.zeros(N - i - 1)))
-      
-      # For i=0
-      for (int j = 0; j < N; j++) {
-        if j < llow
-          tline[j] += tline[0]*(p_low*bino_table_zero_low[j] + p_high*bino_table_zero_high[j])
-        else
-          tline[j] = 0
-      }
-      if llow < N
-        tline[llow] += tline[0]*p_high*bino_table_zero_high[j])
-      # For i > 0
-      for (int i = 1; i < N; i++) {
-        for (int j = 0; j < llow; j++) {
-          if i+j < N
-            tline[i+j] += tline[i]*(p_low*bino_table_zero_low[j] + p_high*bino_table_zero_high[j])
-          else
-            tline[N] += tline[i]*(p_low*bino_table_zero_low[j] + p_high*bino_table_zero_high[j])
+    int i, r, c;
+    for (i = 0; i < totallines-2; i++)
+    {
+        
+        for (c = 0; c < N+1; c++) {
+            t_line_comp(c) = t_line(0) * bino_table_zero_both_convmtx_summed_weightedsum(0,c);
         }
-        if i+llow < N
-          tline[i+llow] += tline[i]*p_high*bino_table_zero_high[j]
-        else
-          tline[N] += tline[i]*p_high*bino_table_zero_high[j]
-      }
-      
-      # ===========================     
-      # 2. compute pcond_table:
-      # ============================
-      
-      
+        for (r = 1; r < nrows1; r++) {
+            for (c = 0; c < N+1; c++) {
+                t_line_comp(c) += t_line(r) * bino_table_zero_both_convmtx_summed_weightedsum(r,c);
+            }
+        }
+        for (c = 0; c < N+1; c++) {    
+            t_line(c) = t_line_comp(c);
+        }
+        
+        if (i < N) {
+            for (c = i+2; c < N+1; c++)
+            {
+                t_line(i+1) += t_line(c);
+                t_line(c) = 0.;
+            }
+        }
+        //printf("i = %d, t_line(i,N) = %g\n",i,t_line(N));
+        //printf("t_line");
+        //for (c = 0; c < N+1; c++) {    
+        //    printf("%g ", t_line(c));
+        //}
+        //printf("\n");
+        
+        
+        if (p0 > 1) {
+            if ((double(p0) - 1) < 0.000001) {
+                p0 = 1.0;
+            }
+        }
+    
+        for (c = 0; c < N; c++) {
+            tfirst_line(c) = t_line(0) * cm_all_w(0,c);
+        }
+        for (r = 1; r < nrows2; r++) {
+            for (c = 0; c < N; c++) {
+                tfirst_line(c) += t_line(r) * cm_all_w(r,c);
+            }
+        }
+        
+        //printf("i = %d, tfirst_line(i,N-1) = %g\n",i,tfirst_line(N-1));
+        //printf("tfirst_line: ");
+        //for (c = 0; c < N+1; c++) {    
+        //    printf("%g ", tfirst_line(c));
+        //}
+        //printf("\n");        
+        
+        if ((i+2)%20 == 0) {
+            if (t_line(N) > (1-1e-3)) {
+                break;
+            }
+        }
+
+        if ((i+2) >= N) {
+            exp_N1 += (i+2) * tfirst_line(N-1);
+        }
+        
     }
     
-    for (int l = N; l < totallines-1; l++) {:
-      #t[i+1,:] = numpy.dot(t[i,:] , bino_table_zero_both_convmtx_summed_weightedsum)
-      # For i=0
-      for (int j = 0; j < N; j++) {
-        if j < lweighted
-          tline[j] += tline[0]*bino_table_zero_both_convmtx_summed_weightedsum[j]
-        else
-          tline[j] = 0
-      }
-      # For i > 0
-      for (int i = 1; i < N; i++) {
-        for (int j = 0; j < lweighted; j++) {
-          if i+j < N
-            tline[i+j] += tline[i]*bino_table_zero_both_convmtx_summed_weightedsum[j]
-          else
-            tline[N] += tline[i]*bino_table_zero_both_convmtx_summed_weightedsum[j]
-        }
-      }
-
+    if (t_line(N) < (1. - 1e-2)) {
+        exp_N1 = 0.;
     }
-    """    
+    
+
+    return_val = exp_N1;
+    """        
+    
+    exp_N1 = scipy.weave.inline(code,['t_line', 't_line_comp', 'tfirst_line', 'bino_table_zero_both_convmtx_summed_weightedsum', 'cm_all_w', 'totallines', 'p0', 'N', 'nrows1', 'nrows2', 'exp_N1'],type_converters=scipy.weave.converters.blitz, compiler = 'gcc', verbose = 2)
+    
+    return exp_N1
+    
