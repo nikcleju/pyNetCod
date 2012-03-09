@@ -13,10 +13,11 @@ def testCreate():
     auto_option = 'a'
     maxtries = 100
     
-    examples.generate_example('D:\\Nic\\Dev\\ExNC\\2', {'n_helpers': n_helpers, 'minnnodes': minnnodes, 'rmin': rmin, 'rmax': rmax, 'auto_option': auto_option, 'maxtries': maxtries})    
+    #examples.generate_example('D:\\Nic\\Dev\\ExNC\\3', {'n_helpers': n_helpers, 'minnnodes': minnnodes, 'rmin': rmin, 'rmax': rmax, 'auto_option': auto_option, 'maxtries': maxtries})    
+    examples.generate_example('E:\\Master\\ExNC\\2', {'n_helpers': n_helpers, 'minnnodes': minnnodes, 'rmin': rmin, 'rmax': rmax, 'auto_option': auto_option, 'maxtries': maxtries})
 
 def testLoadRun_globaldelay():
-    examples.load_example_and_run('..\\ExNC\\2', {'do_global_delay':1,
+    examples.load_example_and_run('..\\ExNC\\3', {'do_global_delay':1,
                                                   'do_global_flow':0,
                                                   'do_dist_delay':0,
                                                   'do_dist_flow':0})
@@ -44,7 +45,14 @@ def testLoadRun_distdelay_r1():
                                                   'do_dist_delay':1,
                                                   'do_dist_flow':0,
                                                   'rmin':1,
-                                                  'rmax':1})                                                  
+                                                  'rmax':1})
+
+def testLoadRun_globaldelay_icc():
+    examples.load_example_and_run('..\\ExNC\\3', {'do_global_delay':1,
+                                                  'do_global_flow':0,
+                                                  'do_dist_delay':0,
+                                                  'do_dist_flow':0,
+                                                  'do_old_icc_version':1})
 
 def profileLoadRun_globaldelay():
     
@@ -60,3 +68,4 @@ def profileLoadRun_globaldelay():
 
 if __name__ == "__main__":
     testLoadRun_globaldelay()
+    #testLoadRun_globaldelay_icc()

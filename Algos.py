@@ -294,7 +294,7 @@ def Algo2_Centralized_NC_sel(net, sim, runopts, crit):
     
     # Initialize list of NC nodes
     #ncnodes = [];
-    ncnodes = numpy.array([])
+    ncnodes = numpy.array([], dtype='int32')
     
     # Find initial (no NC nodes) estimates
     #tc_nonc = Algo1_delay_computation(net, sim, [], []);
